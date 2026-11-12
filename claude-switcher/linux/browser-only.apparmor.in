@@ -1,0 +1,7 @@
+# Ubuntu namespace permission for this exact launcher; isolation is enforced by
+# bubblewrap and sandbox-runtime. This profile does not grant sudo/root.
+abi <abi/4.0>,
+include <tunables/global>
+profile claude-browser-only "__LAUNCHER__" flags=(unconfined) {
+  userns,
+}

@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ccam 額度</title>
+<style>
+  :root {
+    --ink: #1c1712;
+    --paper: #f4efe6;
+    --card: #fffaf3;
+    --line: #e3d7c6;
+    --muted: #74685c;
+    --brass: #8d5a2b;
+    --ok: #2d6a4c;
+    --warn: #a15c12;
+    --hot: #9d2f2f;
+    --live: #1d6b5e;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; }
+  body {
+    background:
+      radial-gradient(900px 420px at 0% -10%, #fff 0%, transparent 55%),
+      var(--paper);
+    color: var(--ink);
+    font-family: "Noto Sans CJK TC", "Noto Sans CJK SC", sans-serif;
+  }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 48px 28px 72px; }
+  .kicker {
+    margin: 0;
+    color: var(--brass);
+    font-size: 12px;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+  }
+  header {
+    display: flex;
+    justify-content: space-between;
+    gap: 24px;
+    align-items: flex-end;
+    padding-bottom: 22px;
+    border-bottom: 1px solid var(--line);
+  }
+  h1 {
+    margin: 6px 0 0;
+    font-family: "Noto Serif CJK TC", "Noto Serif CJK SC", serif;
+    font-weight: 600;
+    font-size: 64px;
+    line-height: 0.95;
+    letter-spacing: -0.04em;
+  }
+  .sub { margin: 14px 0 0; max-width: 640px; color: var(--muted); font-size: 14px; line-height: 1.7; }
+  .tools { display: flex; gap: 10px; align-items: center; padding-bottom: 6px; }
+  button, .chip {
+    border: 1px solid var(--line);
+    background: var(--card);
+    color: var(--ink);
+    border-radius: 999px;
+    padding: 8px 14px;
+    font: inherit;
+    font-size: 13px;
+  }
+  button { cursor: pointer; }
+  button:hover { border-color: var(--brass); color: var(--brass); }
+  button:disabled { cursor: wait; opacity: 0.6; }
+  .lead { min-height: 52px; margin: 22px 0 6px; }
+  .lead strong { font-family: "Noto Serif CJK TC", serif; font-size: 22px; font-weight: 600; }
+  .hint { display: block; margin-top: 4px; color: var(--muted); font-size: 13px; }
+  main { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-top: 18px; }
+  article {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 22px;
+    padding: 22px 22px 16px;
+    min-height: 360px;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 18px 40px rgba(70, 44, 18, 0.045);
+  }
+  article.pick { border-color: #c9a27a; box-shadow: 0 18px 44px rgba(141, 90, 43, 0.1); }
+  article.bad { background: #fbf7f5; }
+  .who { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; }
+  .name { margin: 0; font-family: "Noto Serif CJK TC", serif; font-size: 28px; letter-spacing: -0.03em; }
+  .email { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
+  .tag { color: var(--brass); font-size: 12px; white-space: nowrap; }
+  .meter { margin-top: 22px; }
+  .meter .top { display: flex; justify-content: space-between; align-items: baseline; }
+  .meter .label { color: var(--muted); font-size: 13px; }
+  .num {
+    font-family: "Noto Serif CJK TC", serif;
+    font-size: 56px;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.045em;
+    line-height: 0.9;
+  }
+  .meter.small .num { font-size: 32px; }
+  .pct { font-size: 0.42em; margin-left: 2px; color: var(--muted); letter-spacing: 0; }
+  .track { height: 7px; margin-top: 10px; background: #efe4d4; border-radius: 99px; overflow: hidden; }
+  .fill { height: 100%; width: 0; background: var(--ok); border-radius: inherit; transition: width 0.45s ease; }
+  .fill.warn { background: var(--warn); }
+  .fill.hot { background: var(--hot); }
+  .reset { min-height: 16px; margin: 7px 0 0; color: var(--muted); font-size: 12px; }
+  .card-foot { margin-top: auto; display: flex; justify-content: space-between; gap: 12px; align-items: center; padding-top: 18px; }
+  .src { color: var(--muted); font-size: 12px; }
+  .src.live { color: var(--live); }
+  .err { margin: 16px 0 0; color: var(--hot); font-size: 13px; line-height: 1.55; }
+  .raw { color: var(--muted); font-family: "Noto Sans Mono CJK TC", ui-monospace, monospace; font-size: 12px; }
+  .foot { margin: 28px 0 0; color: var(--muted); font-size: 12px; }
+  .foot code { font-family: "Noto Sans Mono CJK TC", ui-monospace, monospace; }
+  .ghost { background: linear-gradient(90deg, #fffaf3 0%, #f6f0e6 50%, #fffaf3 100%); background-size: 200% 100%; animation: sheen 1.4s ease infinite; }
+  @keyframes sheen { from { background-position: 100% 0; } to { background-position: -100% 0; } }
+  @media (max-width: 980px) {
+    h1 { font-size: 48px; }
+    header { flex-direction: column; align-items: flex-start; }
+    main { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <p class="kicker">ccam</p>
+      <h1>額度</h1>
+      <p class="sub">Anthropic 的用量介面大約一分鐘才肯答一次，問更密會被限流，所以卡片上的「介面」讀數會停在上一筆。對話當下的數字來自狀態列：用 ccam 開的 Claude 一有回覆，這頁約 2 秒內改成那個數字。已經開著的視窗要重開一次，才會開始回報。</p>
+    </div>
+    <div class="tools">
+      <span class="chip" id="clock">讀取中</span>
+      <button id="refresh" type="button">立即重新整理</button>
+    </div>
+  </header>
+  <p class="lead" id="banner"></p>
+  <main id="board"></main>
+  <p class="foot">本機頁面 · <code>ccam-board</code> · 127.0.0.1:47321</p>
+</div>
+<script>
+const board = document.querySelector("#board");
+const banner = document.querySelector("#banner");
+const clock = document.querySelector("#clock");
+
+function esc(value) {
+  return String(value ?? "").replace(/[&<>"']/g, (ch) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+  }[ch]));
+}
+
+function age(iso) {
+  if (!iso) return "還沒有讀數";
+  const seconds = Math.max(0, (Date.now() - Date.parse(iso)) / 1000);
+  if (seconds < 5) return "剛剛";
+  if (seconds < 60) return Math.round(seconds) + " 秒前";
+  if (seconds < 3600) return Math.round(seconds / 60) + " 分鐘前";
+  return Math.round(seconds / 3600) + " 小時前";
+}
+
+function resetText(iso) {
+  if (!iso) return "";
+  const ms = Date.parse(iso) - Date.now();
+  if (Number.isNaN(ms) || ms <= 0) return "已重置";
+  const hours = Math.floor(ms / 3600000);
+  const days = Math.floor(hours / 24);
+  const rest = hours % 24;
+  if (days > 0) return "還有 " + days + " 天 " + rest + " 小時重置";
+  const minutes = Math.floor((ms % 3600000) / 60000);
+  if (hours > 0) return "還有 " + hours + " 小時 " + minutes + " 分重置";
+  return "還有 " + Math.max(1, minutes) + " 分鐘重置";
+}
+
+function tone(percent) {
+  if (percent >= 100) return "hot";
+  if (percent >= 80) return "warn";
+  return "";
+}
+
+function figure(data) {
+  const known = data && data.known && data.percent != null;
+  const percent = known ? data.percent : null;
+  const width = percent == null ? 0 : Math.max(0, Math.min(100, percent));
+  const text = percent == null ? "—" : percent + '<span class="pct">%</span>';
+  return { text, width, reset: known ? resetText(data.resets_at) : "" };
+}
+
+function meter(label, data, large) {
+  const view = figure(data);
+  return `<div class="meter ${large ? "" : "small"}">
+    <div class="top"><span class="label">${esc(label)}</span><span class="num">${view.text}</span></div>
+    <div class="track"><div class="fill ${tone(view.width)}" style="width:${view.width}%"></div></div>
+    <p class="reset">${esc(view.reset)}</p>
+  </div>`;
+}
+
+function sourceLabel(account) {
+  const when = age(account.measured_at || account.at);
+  if (account.live || account.source === "statusline") return "工作階段 · " + when;
+  if (account.source === "live") return "介面 · " + when;
+  if (account.source === "cache") return "快取 · " + when;
+  return account.source || "未知來源";
+}
+
+function render(data) {
+  const accounts = data.accounts || [];
+  clock.textContent = data.loading && !accounts.length ? "讀取中" : (data.error ? "讀取失敗" : "已連線");
+  if (data.loading && !accounts.length) {
+    banner.textContent = "正在讀取三個帳號的用量";
+    board.innerHTML = "<article class='ghost'></article><article class='ghost'></article><article class='ghost'></article>";
+    return;
+  }
+  const best = accounts.find((item) => item.name === data.headroom);
+  if (data.error) {
+    banner.textContent = data.error;
+  } else if (best) {
+    banner.innerHTML = `現在比較寬裕的是 <strong>${esc(best.name)}</strong>${best.email ? " · " + esc(best.email) : ""}<span class="hint">自動接續只比 5 小時用量，一樣時留在前面的帳號。</span>`;
+  } else {
+    banner.textContent = "沒有還能自動接上的帳號";
+  }
+  board.innerHTML = accounts.map((account) => {
+    const limited = (account.error || "").includes("rate limited");
+    const bad = account.status && account.status !== "ok" && !limited;
+    const expired = account.status === "expired";
+    return `<article class="${account.name === data.headroom ? "pick" : ""} ${bad ? "bad" : ""}">
+      <div class="who">
+        <h2 class="name">${esc(account.name)}</h2>
+        <span class="tag">${account.default ? "預設 · " : ""}${esc(account.shortcut || "")}</span>
+      </div>
+      <p class="email">${esc(account.email || "")}</p>
+      ${meter("5 小時", account.five_hour, true)}
+      ${meter("本週", account.weekly, false)}
+      ${(account.scoped || []).map((item) => meter(item.label, item, false)).join("")}
+      ${limited ? `<p class="reset">介面暫時限流，顯示上一筆。</p>` : ""}
+      ${expired ? `<p class="err">登入過期。啟動這個帳號時，ccam 會換發登入。</p>` : ""}
+      ${bad && account.error ? `<p class="err raw">${esc(account.error)}</p>` : ""}
+      <footer class="card-foot">
+        <span class="src ${account.live ? "live" : ""}">${esc(sourceLabel(account))}</span>
+        <button type="button" data-open="${esc(account.name)}">打開</button>
+      </footer>
+    </article>`;
+  }).join("") || `<article><p class="err">還沒有帳號。先在終端機執行 ccam add。</p></article>`;
+}
+
+board.addEventListener("click", async (event) => {
+  const name = event.target.dataset && event.target.dataset.open;
+  if (!name) return;
+  event.target.disabled = true;
+  const response = await fetch("/api/open", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name })
+  });
+  event.target.disabled = false;
+  if (!response.ok) event.target.textContent = "沒打開";
+});
+
+document.querySelector("#refresh").addEventListener("click", async (event) => {
+  event.target.disabled = true;
+  event.target.textContent = "更新中";
+  try {
+    const response = await fetch("/api/refresh", { method: "POST" });
+    draw(await response.json());
+  } finally {
+    event.target.disabled = false;
+    event.target.textContent = "立即重新整理";
+  }
+});
+
+setInterval(() => {
+  document.querySelectorAll(".src").forEach((node) => {
+    const text = node.textContent || "";
+    if (!text.includes("·")) return;
+    const measured = node.closest("article") && node.closest("article").dataset.at;
+    if (!measured) return;
+    node.textContent = text.split("·")[0].trim() + " · " + age(measured);
+  });
+}, 1000);
+
+let lastData = null;
+function draw(data) {
+  lastData = data;
+  render(data);
+  document.querySelectorAll("#board article").forEach((card, index) => {
+    const account = (data.accounts || [])[index];
+    if (account) card.dataset.at = account.measured_at || account.at || "";
+  });
+}
+
+let lastOk = false;
+async function load() {
+  try {
+    const response = await fetch("/api/snapshot");
+    if (!response.ok) throw new Error("snapshot");
+    draw(await response.json());
+    lastOk = true;
+  } catch (error) {
+    lastOk = false;
+    clock.textContent = "讀取失敗";
+  }
+}
+load();
+setInterval(load, 3000);
+const events = new EventSource("/api/events");
+events.onmessage = (event) => {
+  lastOk = true;
+  draw(JSON.parse(event.data));
+};
+events.onerror = () => {
+  if (!lastOk) clock.textContent = "重新連線";
+};
+</script>
+</body>
+</html>

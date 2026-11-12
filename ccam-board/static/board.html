@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+<meta charset="utf-8">
+<title>ccam</title>
+<style>
+  @font-face { font-family: "Barlow Condensed"; font-weight: 500; src: url("fonts/BarlowCondensed-Medium.ttf"); }
+  @font-face { font-family: "Barlow Condensed"; font-weight: 600; src: url("fonts/BarlowCondensed-SemiBold.ttf"); }
+  @font-face { font-family: "Barlow"; font-weight: 400; src: url("fonts/Barlow-Regular.ttf"); }
+  @font-face { font-family: "Barlow"; font-weight: 500; src: url("fonts/Barlow-Medium.ttf"); }
+
+  :root {
+    --bg: #0b0d10;
+    --panel: #12151a;
+    --line: rgba(235, 229, 214, 0.08);
+    --ivory: #ebe5d6;
+    --dim: #8e887a;
+    --faint: #5e5a51;
+    --go: #7fd6b9;
+    --warn: #f2b84b;
+    --stop: #ff6b5e;
+    --ui: "Barlow", "Noto Sans CJK SC", sans-serif;
+    --num: "Barlow Condensed", "Noto Sans CJK SC", sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body { background: radial-gradient(1100px 420px at 20% -10%, rgba(127,214,185,.07), transparent 60%), var(--bg);
+         color: var(--ivory); font-family: var(--ui); -webkit-font-smoothing: antialiased;
+         user-select: none; padding: 26px 34px 30px; min-height: 100vh; }
+
+  header { display: flex; align-items: flex-start; justify-content: space-between; gap: 30px; margin-bottom: 22px; }
+  .now-label { color: var(--dim); font-size: 14px; }
+  .now { font-family: var(--num); font-weight: 600; font-size: 52px; line-height: 1.05; }
+  .now .left { transition: color .4s; }
+  .now-why { color: var(--dim); font-size: 14px; margin-top: 6px; max-width: 72ch; }
+  .controls { display: flex; align-items: center; gap: 14px; padding-top: 6px; }
+  .stamp { color: var(--faint); font-family: var(--num); font-size: 13px; letter-spacing: .03em; }
+  .mode { position: relative; display: flex; padding: 4px; border-radius: 11px; background: #07080a;
+          box-shadow: inset 0 1px 3px rgba(0,0,0,.8), 0 1px 0 rgba(255,255,255,.05); }
+  .mode button { position: relative; z-index: 1; border: 0; background: none; color: var(--dim);
+                 font: 500 14px var(--ui); padding: 7px 16px; cursor: pointer; transition: color .3s; }
+  .mode button.on { color: #14110c; }
+  .mode .knob { position: absolute; top: 4px; bottom: 4px; border-radius: 8px; background: linear-gradient(#f3eee2, #cbc4b3);
+                transition: left .4s cubic-bezier(.2,.8,.2,1), width .4s; }
+  .icon { width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--line); background: var(--panel);
+          color: var(--dim); cursor: pointer; display: grid; place-items: center; transition: transform .6s; }
+  .icon:hover { color: var(--ivory); }
+  .icon.spin { transform: rotate(360deg); }
+
+  .head, .row { display: grid; grid-template-columns: 130px 200px 1fr 1fr 230px 118px; align-items: center; gap: 26px; }
+  .head { color: var(--faint); font-size: 12px; padding: 0 20px 8px; }
+  .row { position: relative; padding: 16px 20px; border-radius: 14px; margin-bottom: 8px;
+         background: linear-gradient(180deg, #15181d, #101317); border: 1px solid var(--line);
+         box-shadow: inset 0 1px 0 rgba(255,255,255,.035); transition: opacity .4s, border-color .4s; }
+  .row.next { border-color: rgba(127, 214, 185, .55); box-shadow: 0 0 0 1px rgba(127,214,185,.15), 0 8px 30px rgba(127,214,185,.06); }
+  .row.full, .row.stale { opacity: .62; }
+
+  .name { font-family: var(--num); font-weight: 600; font-size: 26px; line-height: 1; }
+  .who-sub { color: var(--dim); font-size: 12px; margin-top: 5px; }
+
+  .status { font-family: var(--num); font-weight: 600; font-size: 22px; line-height: 1.1; display: flex; align-items: center; gap: 8px; }
+  .status::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor; box-shadow: 0 0 10px currentColor; }
+  .status.go { color: var(--go); }
+  .status.stop { color: var(--stop); }
+  .status.warn { color: var(--warn); }
+  .status-sub { color: var(--dim); font-size: 13px; margin-top: 3px; }
+
+  .meter-top { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+  .meter-num { font-family: var(--num); font-weight: 600; font-size: 22px; }
+  .meter-num small { font-size: 13px; color: var(--dim); font-weight: 500; margin-left: 2px; }
+  .meter-label { color: var(--dim); font-size: 12px; }
+  .bar { height: 6px; border-radius: 3px; background: rgba(235,229,214,.08); margin: 7px 0 6px; overflow: hidden; }
+  .bar i { display: block; height: 100%; border-radius: 3px; transition: width 1.2s cubic-bezier(.2,.8,.2,1), background .4s; }
+  .meter-sub { color: var(--dim); font-size: 12px; }
+
+  .speed-num { font-family: var(--num); font-weight: 600; font-size: 20px; color: var(--faint); transition: color .4s; }
+  .row.live .speed-num { color: var(--go); }
+  .speed-num small { font-size: 12px; color: var(--dim); font-weight: 500; margin-left: 3px; }
+  svg.spark { width: 100%; height: 30px; display: block; margin-top: 2px; }
+  .eta { color: var(--warn); font-size: 12px; min-height: 15px; }
+  .live-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--go); margin-right: 6px;
+              vertical-align: middle; opacity: 0; }
+  .row.live .live-dot { opacity: 1; animation: pulse 1.2s ease-in-out infinite; }
+  @keyframes pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(127,214,185,.6); } 50% { box-shadow: 0 0 0 5px rgba(127,214,185,0); } }
+
+  /* 未来 5 小时时间轴 */
+  .timeline { position: relative; height: 122px; margin: 4px 0 26px; padding: 0 4px; }
+  .tl-axis { position: absolute; left: 0; right: 0; top: 60px; height: 2px; border-radius: 1px;
+             background: linear-gradient(90deg, rgba(127,214,185,.55), rgba(235,229,214,.10) 30%, rgba(235,229,214,.06)); }
+  .tl-tick { position: absolute; top: 67px; transform: translateX(-50%); color: var(--faint); font: 500 12px var(--num); }
+  .tl-tick { white-space: nowrap; }
+  .tl-tick.last { transform: translateX(-100%); }
+  .tl-tick.last::before { left: 100%; }
+  .tl-tick::before { content: ""; position: absolute; left: 50%; top: -9px; width: 1px; height: 6px; background: rgba(235,229,214,.18); }
+  .tl-now { position: absolute; left: 0; top: 55px; width: 12px; height: 12px; border-radius: 50%; background: var(--go);
+            transform: translateX(-50%); animation: pulse 1.6s ease-in-out infinite; }
+  .tl-mark { position: absolute; transform: translateX(-50%); text-align: center; white-space: nowrap; transition: left 1.2s cubic-bezier(.2,.8,.2,1); }
+  .tl-mark .pin { width: 2px; height: 16px; margin: 0 auto; border-radius: 1px; }
+  .tl-mark .dot { width: 10px; height: 10px; border-radius: 50%; margin: -1px auto 0; }
+  .tl-mark .lbl { font: 600 15px var(--num); letter-spacing: .02em; }
+  .tl-mark .sub { font-size: 11px; color: var(--dim); }
+  .tl-mark.up { bottom: 57px; }
+  .tl-mark.up .pin, .tl-mark.up .dot { order: 2; }
+  .tl-mark.down { top: 56px; }
+  .tl-mark.back .dot { background: var(--go); box-shadow: 0 0 10px rgba(127,214,185,.7); }
+  .tl-mark.back .pin { background: rgba(127,214,185,.5); }
+  .tl-mark.empty .dot { background: var(--warn); box-shadow: 0 0 10px rgba(242,184,75,.7); }
+  .tl-mark.empty .pin { background: rgba(242,184,75,.5); }
+  .tl-mark.empty .lbl { color: var(--warn); }
+
+  .open { justify-self: end; border-radius: 999px; padding: 9px 18px; font: 500 14px var(--ui); cursor: pointer; color: var(--ivory);
+          background: #1a1d22; border: 1px solid rgba(235,229,214,.14); transition: border-color .2s; }
+  .open:hover { border-color: rgba(235,229,214,.45); }
+  .row.next .open { background: var(--go); color: #0b1a14; border-color: transparent; }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <div class="now-label" id="nowLabel"></div>
+    <div class="now" id="now"></div>
+    <div class="now-why" id="why"></div>
+  </div>
+  <div class="controls">
+    <span class="stamp" id="stamp"></span>
+    <div class="mode" id="mode"><div class="knob"></div></div>
+    <button class="icon" id="refresh" title="立即刷新">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg>
+    </button>
+  </div>
+</header>
+
+<div class="timeline" id="timeline"></div>
+
+<div class="head"><span>账号</span><span>现在</span><span>5 小时额度</span><span>每周额度</span><span>正在消耗</span><span></span></div>
+<div id="rows"></div>
+
+<script>
+const send = (msg) => window.webkit.messageHandlers.ccam.postMessage(JSON.stringify(msg));
+const color = (left) => left <= 10 ? "var(--stop)" : left <= 30 ? "var(--warn)" : "var(--go)";
+const fmtRate = (r) => r >= 1000 ? (r / 1000).toFixed(1) + "k" : Math.round(r).toString();
+const rows = {};
+
+// 一个账号此刻的状态：能不能用、为什么不能、什么时候恢复
+function verdict(a) {
+  if (a.stale) return { cls: "stop", word: "登录过期", sub: "打开一次会自动续期", rank: 3 };
+  if (a.week.percent >= 100) return { cls: "stop", word: "本周已满", sub: `${a.week.reset}恢复`, rank: 2, wait: a.week.secs };
+  if (a.five.percent >= 100) return { cls: "stop", word: "已满", sub: `${a.five.reset}恢复`, rank: 2, wait: a.five.secs };
+  if (a.five.percent >= 85) return { cls: "warn", word: "快满了", sub: `还剩 ${100 - a.five.percent}%`, rank: 1 };
+  return { cls: "go", word: "可用", sub: a.running ? `${a.running} 个会话在用` : "空闲", rank: 1 };
+}
+
+function spark(svg, history) {
+  if (!history.length) { svg.innerHTML = ""; return; }
+  const top = Math.max(...history, 40), w = 230, h = 30, n = 45;
+  const pts = history.slice(-n).map((v, i, arr) => [w - (arr.length - 1 - i) * (w / (n - 1)), h - 2 - (h - 5) * Math.min(v / top, 1)]);
+  const line = pts.map((p, i) => (i ? "L" : "M") + p[0].toFixed(1) + " " + p[1].toFixed(1)).join(" ");
+  svg.innerHTML = `<path d="${line} L ${w} ${h} L ${pts[0][0]} ${h} Z" fill="rgba(127,214,185,.12)"/>` +
+                  `<path d="${line}" fill="none" stroke="rgba(127,214,185,.85)" stroke-width="1.5" stroke-linejoin="round"/>`;
+}
+
+// 未来 5 小时：谁什么时候恢复（绿），正在用的按当前速度什么时候用满（琥珀）
+function timeline(accounts) {
+  const span = 5 * 3600, el = document.getElementById("timeline");
+  const marks = [];
+  accounts.forEach((a) => {
+    const v = verdict(a);
+    if (v.wait && v.wait <= span) marks.push({ cls: "back", at: v.wait, lbl: `${a.name} 恢复`, sub: v.sub.replace("恢复", "") });
+    if (!a.stale && a.etaMin != null && a.etaMin * 60 <= span) marks.push({ cls: "empty", at: a.etaMin * 60, lbl: `${a.name} 用满`, sub: a.eta.replace("按此速度", "") });
+  });
+  marks.sort((x, y) => x.at - y.at);
+  let html = '<div class="tl-axis"></div><div class="tl-now"></div>';
+  for (let h = 1; h <= 5; h++) html += `<div class="tl-tick${h === 5 ? " last" : ""}" style="left:${h / 5 * 100}%">${h} 小时</div>`;
+  marks.forEach((m, i) => {
+    const left = Math.max(Math.min(m.at / span * 100, 97), 3);
+    const up = i % 2 === 0;  // 交替上下，标签不挤在一起
+    html += `<div class="tl-mark ${m.cls} ${up ? "up" : "down"}" style="left:${left}%;display:flex;flex-direction:column;align-items:center">
+      ${up ? `<div class="lbl">${m.lbl}</div><div class="sub">${m.sub}</div><div class="pin"></div><div class="dot"></div>`
+           : `<div class="dot"></div><div class="pin"></div><div class="lbl">${m.lbl}</div><div class="sub">${m.sub}</div>`}</div>`;
+  });
+  if (!marks.length) html += '<div class="tl-tick" style="left:50%;top:28px;font-size:13px">未来 5 小时没有账号要恢复或用满</div>';
+  el.innerHTML = html;
+}
+
+function ensure(a) {
+  if (rows[a.name]) return rows[a.name];
+  const row = document.createElement("div");
+  row.className = "row";
+  row.innerHTML = `
+    <div><div class="name"></div><div class="who-sub"></div></div>
+    <div><div class="status"></div><div class="status-sub"></div></div>
+    <div class="m5"><div class="meter-top"><span class="meter-num"></span><span class="meter-label">剩余</span></div>
+      <div class="bar"><i></i></div><div class="meter-sub"></div></div>
+    <div class="mw"><div class="meter-top"><span class="meter-num"></span><span class="meter-label">剩余</span></div>
+      <div class="bar"><i></i></div><div class="meter-sub"></div></div>
+    <div><div class="speed-num"><span class="live-dot"></span><span class="rate"></span><small>token/s</small></div>
+      <svg class="spark" viewBox="0 0 230 30" preserveAspectRatio="none"></svg><div class="eta"></div></div>
+    <button class="open"></button>`;
+  row.querySelector(".open").addEventListener("click", () => send({ action: "open", name: a.name }));
+  return (rows[a.name] = row);
+}
+
+function meter(box, used, reset, stale, prefix) {
+  const left = stale ? 0 : Math.max(100 - used, 0);
+  box.querySelector(".meter-num").innerHTML = stale ? "—" : `${left}<small>%</small>`;
+  const bar = box.querySelector(".bar i");
+  bar.style.width = left + "%";
+  bar.style.background = color(left);
+  box.querySelector(".meter-sub").textContent = stale ? "" : left <= 0 ? "已用完" : `${prefix}${reset}重置`;
+}
+
+window.update = (state) => {
+  const picked = state.accounts.find((a) => a.best);
+  document.getElementById("nowLabel").textContent = picked ? "现在用" : "";
+  document.getElementById("now").innerHTML = picked
+    ? `${picked.name} <span class="left" style="color:${color(100 - picked.five.percent)}">还剩 ${100 - picked.five.percent}%</span>`
+    : "所有账号都满了";
+  const soonest = state.accounts.map((a) => ({ a, v: verdict(a) })).filter((x) => x.v.wait).sort((x, y) => x.v.wait - y.v.wait)[0];
+  document.getElementById("why").textContent = picked
+    ? `${picked.eta || "5 小时额度 " + picked.five.reset + "重置"}。${state.modeHint}`
+    : soonest ? `最快恢复的是 ${soonest.a.name}，${soonest.v.sub}。` : "所有账号都不可用。";
+  document.getElementById("stamp").textContent = state.stamp;
+
+  const mode = document.getElementById("mode");
+  if (!mode.querySelector("button")) {
+    state.modes.forEach(([key, label, tip]) => {
+      const b = document.createElement("button");
+      b.textContent = label; b.title = tip; b.dataset.key = key;
+      b.addEventListener("click", () => send({ action: "mode", mode: key }));
+      mode.appendChild(b);
+    });
+  }
+  const knob = mode.querySelector(".knob");
+  mode.querySelectorAll("button").forEach((b) => {
+    const on = b.dataset.key === state.mode;
+    b.classList.toggle("on", on);
+    if (on) { knob.style.left = b.offsetLeft + "px"; knob.style.width = b.offsetWidth + "px"; }
+  });
+
+  // 排序：下一个 → 其他可用 → 已满（最快恢复的在前）→ 登录过期
+  const order = state.accounts.map((a) => ({ a, v: verdict(a) }))
+    .sort((x, y) => (y.a.best - x.a.best) || (x.v.rank - y.v.rank) || ((x.v.wait || 0) - (y.v.wait || 0)));
+  const box = document.getElementById("rows");
+  const names = new Set(state.accounts.map((a) => a.name));
+  for (const n of Object.keys(rows)) if (!names.has(n)) { rows[n].remove(); delete rows[n]; }
+  timeline(state.accounts);
+  order.forEach(({ a, v }) => {
+    const row = ensure(a);
+    box.appendChild(row);
+    row.className = "row" + (a.best ? " next" : "") + (v.rank === 2 ? " full" : "") + (a.stale ? " stale" : "") + (a.rate >= 1 ? " live" : "");
+    row.querySelector(".name").textContent = a.name;
+    row.querySelector(".who-sub").textContent = a.best ? "下一个用它" : a.running ? `${a.running} 个会话运行中` : "";
+    const st = row.querySelector(".status");
+    st.className = "status " + v.cls;
+    st.textContent = v.word;
+    row.querySelector(".status-sub").textContent = v.sub;
+    meter(row.querySelector(".m5"), a.five.percent, a.five.reset, a.stale, "");
+    meter(row.querySelector(".mw"), a.week.percent, a.week.reset, a.stale, "");
+    row.querySelector(".rate").textContent = a.rate >= 1 ? fmtRate(a.rate) : "0";
+    spark(row.querySelector(".spark"), a.history);
+    row.querySelector(".eta").textContent = a.eta;
+    row.querySelector(".open").textContent = a.stale ? "重新登录" : "切换并打开";
+  });
+};
+
+document.getElementById("refresh").addEventListener("click", (e) => {
+  e.currentTarget.classList.add("spin");
+  setTimeout(() => e.currentTarget.classList.remove("spin"), 650);
+  send({ action: "refresh" });
+});
+</script>
+</body>
+</html>
