@@ -1,0 +1,30 @@
+[Unit]
+Description=Official Claude account login bridge
+After=network.target claude-relay-cu.service
+Requires=claude-relay-cu.service
+
+[Service]
+User=claude-relay
+Group=claude-relay
+SupplementaryGroups=relay-admin
+Environment=HOME=/var/lib/claude-relay
+WorkingDirectory=/var/lib/claude-relay
+RuntimeDirectory=relay-login
+RuntimeDirectoryMode=0750
+ExecStart=/opt/claude-relay/venv/bin/python /opt/relay-admin/login_broker.py
+Restart=on-failure
+RestartSec=5
+UMask=0077
+NoNewPrivileges=true
+# cu's Secret Service socket is in the host /tmp; a private /tmp would hide it.
+PrivateTmp=false
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/claude-relay /run/relay-login /tmp
+KillMode=control-group
+TimeoutStopSec=10
+MemoryMax=512M
+TasksMax=128
+
+[Install]
+WantedBy=multi-user.target

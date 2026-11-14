@@ -1,3 +1,9 @@
+# VPS Update — v5
+
+新增后台自动登录检测与按需续期、邮箱账号管理，以及本机 Claude 默认连接 VPS 的配置工具。先读 [VPS-RELAY.md](VPS-RELAY.md) 和 [client/DEFAULT-VPS.md](client/DEFAULT-VPS.md)。旧 Windows/Linux 本机工具与数据迁移说明保留如下；VPS 与本机账号状态独立。
+
+---
+
 # Claude Tools Bundle
 
 开源：ccam 多账号管理、Claude 账号额度看板、claude检测器及 Agent 安装配置指引。由你自己的 Agent 按说明安装与验证。

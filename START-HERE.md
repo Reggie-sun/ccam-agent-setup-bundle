@@ -1,3 +1,9 @@
+# VPS Update — v5
+
+新增后台自动登录检测与按需续期、邮箱账号管理，以及本机 Claude 默认连接 VPS 的配置工具。先读 [VPS-RELAY.md](VPS-RELAY.md) 和 [client/DEFAULT-VPS.md](client/DEFAULT-VPS.md)。旧 Windows/Linux 本机工具与数据迁移说明保留如下；VPS 与本机账号状态独立。
+
+---
+
 # Start Here
 
 克隆或下载本仓库。把整个目录交给你电脑上的 AI Agent，发送下面这段话。

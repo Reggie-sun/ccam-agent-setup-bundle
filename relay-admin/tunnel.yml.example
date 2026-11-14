@@ -1,0 +1,7 @@
+# Replace both placeholders with YOUR tunnel ID and hostname.
+tunnel: YOUR_TUNNEL_ID
+credentials-file: /etc/relay-admin/tunnel.json
+ingress:
+  - hostname: admin.example.com
+    service: http://127.0.0.1:4318
+  - service: http_status:404

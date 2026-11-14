@@ -1,0 +1,27 @@
+#!/usr/bin/python3
+import os,pwd,sys
+from pathlib import Path
+allowed={'status','add-account','reauth','login-help'}
+action=sys.argv[1] if len(sys.argv)>1 else 'status'
+if action not in allowed or len(sys.argv)>2:raise SystemExit('Usage: cu-admin status|add-account|reauth|login-help')
+u=pwd.getpwnam('claude-relay');bus=None
+for p in Path('/proc').iterdir():
+    if not p.name.isdigit():continue
+    try:
+        if p.stat().st_uid!=u.pw_uid:continue
+        if b'claude_unlimited' not in (p/'cmdline').read_bytes().split(b'\0'):continue
+        env=dict(x.decode().split('=',1) for x in (p/'environ').read_bytes().split(b'\0') if b'=' in x)
+        bus=env.get('DBUS_SESSION_BUS_ADDRESS')
+        if bus:break
+    except OSError:continue
+if not bus:raise SystemExit('VPS account service is not running')
+env={'HOME':u.pw_dir,'USER':u.pw_name,'LOGNAME':u.pw_name,'PATH':'/opt/claude-relay/bin:/usr/local/bin:/usr/bin:/bin','DBUS_SESSION_BUS_ADDRESS':bus,'XDG_RUNTIME_DIR':'/run/claude-relay','TERM':os.environ.get('TERM','xterm-256color'),'LANG':'C.UTF-8','DISABLE_AUTOUPDATER':'1','CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC':'1'}
+os.setgroups([]);os.setgid(u.pw_gid);os.setuid(u.pw_uid);os.chdir(u.pw_dir)
+if action=='status':
+    import urllib.request,json
+    health=json.load(urllib.request.urlopen('http://127.0.0.1:4317/health',timeout=5))
+    profiles=json.load(urllib.request.urlopen('http://127.0.0.1:4317/api/profiles',timeout=5))['profiles']
+    print('VPS relay health:',health.get('status'));print('Accounts:',len(profiles));print('Needs re-auth:',sum(p.get('state')=='auth_invalid' for p in profiles));raise SystemExit(0)
+if action=='login-help':args=['/opt/claude-relay/claude','auth','login','--help']
+else:args=['/opt/claude-relay/venv/bin/python','-m','claude_unlimited',action]
+os.execvpe(args[0],args,env)

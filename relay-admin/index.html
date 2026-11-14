@@ -1,0 +1,399 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>VPS 账号额度 · AURELIS</title>
+  <style>
+    @font-face{font-family:"Barlow";font-weight:400;src:url('/fonts/Barlow-Regular.ttf');font-display:swap}
+    @font-face{font-family:"Barlow Condensed";font-weight:600;src:url('/fonts/BarlowCondensed-SemiBold.ttf');font-display:swap}
+    :root{--bg:#0b0d10;--panel:#12151a;--line:rgba(235,229,214,.08);--line2:rgba(235,229,214,.14);--ivory:#ebe5d6;--dim:#8e887a;--faint:#5e5a51;--go:#7fd6b9;--warn:#f2b84b;--stop:#ff6b5e;--ui:"Barlow","Noto Sans CJK SC",system-ui,sans-serif;--num:"Barlow Condensed","Noto Sans CJK SC",sans-serif}
+    *{box-sizing:border-box}html,body{margin:0}[hidden]{display:none!important}
+    body{background:radial-gradient(1100px 420px at 20% -10%,rgba(127,214,185,.07),transparent 60%),var(--bg);color:var(--ivory);font:14px/1.45 var(--ui);-webkit-font-smoothing:antialiased;padding:26px 34px 30px;min-height:100vh;overflow-x:hidden}
+    button,input,select{font:inherit;color:inherit}button{cursor:pointer}button:disabled{cursor:wait;opacity:.5}
+    button:focus-visible,input:focus-visible,select:focus-visible,a:focus-visible{outline:2px solid var(--go);outline-offset:3px}
+    .pill{border-radius:999px;padding:8px 16px;background:#1a1d22;border:1px solid var(--line2);transition:border-color .2s;white-space:nowrap}.pill:hover:not(:disabled){border-color:rgba(235,229,214,.45)}
+    .pill.go{background:var(--go);color:#0b1a14;border-color:transparent}.pill.go:hover:not(:disabled){background:#a0e5cc}
+    .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
+
+    header{display:flex;align-items:flex-start;justify-content:space-between;gap:30px;margin-bottom:14px}
+    .reference{min-width:0}.now-label{color:var(--dim);font-size:14px}
+    .now{font:600 46px/1.08 var(--num);overflow-wrap:anywhere}.now .left{color:var(--go);white-space:nowrap}
+    .reference.stale .now .left,.reference.none .now .left{color:var(--warn)}
+    .reference-note{color:var(--dim);font-size:13px;margin-top:6px}.reference-note b{font-weight:400;color:var(--ivory)}.reference-note .bad{color:var(--stop)}
+    .controls{display:flex;align-items:center;gap:10px;padding-top:6px;flex-wrap:wrap;justify-content:flex-end}
+    .stamp{color:var(--faint);font:600 13px var(--num);letter-spacing:.03em;white-space:nowrap}
+    .search{width:200px;border-radius:999px;padding:8px 14px;background:#07080a;border:1px solid var(--line);box-shadow:inset 0 1px 3px rgba(0,0,0,.8)}.search::placeholder{color:var(--faint)}
+    .icon{width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:var(--panel);color:var(--dim);display:grid;place-items:center;transition:transform .6s}.icon:hover:not(:disabled){color:var(--ivory)}.icon.spin{transform:rotate(360deg)}
+
+    .notice,.freshness-warning{display:none;font-size:13px;padding:8px 14px;border-radius:10px;margin:0 0 10px;border:1px solid rgba(242,184,75,.35);background:rgba(242,184,75,.07);color:var(--warn);overflow-wrap:anywhere}
+    .notice.visible,.freshness-warning:not([hidden]){display:block}.notice.success{border-color:rgba(127,214,185,.3);background:rgba(127,214,185,.06);color:var(--go)}
+
+    .timeline{position:relative;height:122px;margin:4px 0 22px;overflow:hidden}
+    .tl-axis{position:absolute;left:0;right:0;top:60px;height:2px;border-radius:1px;background:linear-gradient(90deg,rgba(127,214,185,.55),rgba(235,229,214,.10) 30%,rgba(235,229,214,.06))}
+    .tl-tick{position:absolute;top:67px;transform:translateX(-50%);color:var(--faint);font:600 12px var(--num);white-space:nowrap}
+    .tl-tick::before{content:"";position:absolute;left:50%;top:-9px;width:1px;height:6px;background:rgba(235,229,214,.18)}
+    .tl-tick.last{transform:translateX(-100%)}.tl-tick.last::before{left:100%}
+    .tl-empty{position:absolute;left:50%;top:28px;transform:translateX(-50%);color:var(--faint);font-size:13px;white-space:nowrap}
+    .tl-now{position:absolute;left:0;top:55px;width:12px;height:12px;border-radius:50%;background:var(--go);transform:translateX(-50%);animation:pulse 1.6s ease-in-out infinite}
+    .tl-mark{position:absolute;display:flex;flex-direction:column;align-items:center;transform:translateX(-50%);text-align:center;white-space:nowrap;max-width:44%}
+    .tl-mark.start{transform:translateX(-5px);align-items:flex-start;text-align:left}.tl-mark.end{transform:translateX(calc(-100% + 5px));align-items:flex-end;text-align:right}
+    .tl-mark.up{bottom:57px}.tl-mark.down{top:56px}
+    .tl-mark .pin{width:2px;height:16px;border-radius:1px;background:rgba(127,214,185,.5);margin:0 4px}.tl-mark .dot{width:10px;height:10px;border-radius:50%;background:var(--go);box-shadow:0 0 10px rgba(127,214,185,.7)}
+    .tl-mark.up .dot{margin-top:-1px}.tl-mark.bare{bottom:auto;top:39px}.tl-mark .sub{max-width:100%;overflow:hidden;text-overflow:ellipsis}.tl-mark .lbl{font:600 15px var(--num);letter-spacing:.02em;max-width:100%;overflow:hidden;text-overflow:ellipsis}.tl-mark .sub{font-size:11px;color:var(--dim)}
+    @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(127,214,185,.6)}50%{box-shadow:0 0 0 5px rgba(127,214,185,0)}}
+
+    .head,.account{display:grid;grid-template-columns:minmax(220px,1fr) 180px minmax(160px,1.25fr) minmax(160px,1.25fr) 110px 190px;align-items:center;gap:26px}
+    .head{color:var(--faint);font-size:12px;padding:0 20px 8px}
+    .account{position:relative;padding:16px 20px;border-radius:14px;margin-bottom:8px;background:linear-gradient(180deg,#15181d,#101317);border:1px solid var(--line);box-shadow:inset 0 1px 0 rgba(255,255,255,.035);transition:opacity .4s,border-color .4s}
+    .account.open{border-color:rgba(127,214,185,.35)}.account.dim>:not(.status-details):not(.actions){opacity:.6}.list.stale .account{border-style:dashed}.stale-tag{display:none;margin-top:5px;font-size:11px;color:var(--warn);border:1px solid rgba(242,184,75,.35);border-radius:5px;padding:0 6px}.list.stale .stale-tag{display:inline-block}
+    .identity{min-width:0}.account-name{font:600 24px/1.05 var(--num);min-width:0}
+    .account-name .local,.account-name .domain{display:block;overflow-wrap:anywhere}
+    .account-name .domain{font:400 12px var(--ui);color:var(--dim);margin-top:5px}
+    .status{font:600 21px/1.1 var(--num);display:flex;align-items:center;gap:8px;white-space:nowrap}
+    .status::before{content:"";flex:none;width:8px;height:8px;border-radius:50%;background:currentColor;box-shadow:0 0 10px currentColor}
+    .status.go{color:var(--go)}.status.sched{color:var(--ivory)}.status.sched::before{background:var(--go);box-shadow:none}.status.warn{color:var(--warn)}.status.stop{color:var(--stop)}.status.off{color:var(--dim)}.status.off::before{box-shadow:none}
+    .status-sub{color:var(--dim);font-size:12px;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.status-sub.warning{color:var(--warn)}
+    .quota{min-width:0}.meter-top{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+    .meter-num{font:600 22px var(--num)}.meter-num small{font-size:13px;color:var(--dim);margin-left:2px}.meter-num.unknown{color:var(--faint)}
+    .meter-label{color:var(--dim);font-size:12px;white-space:nowrap}.qn{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
+    .track{height:6px;border-radius:3px;background:rgba(235,229,214,.08);margin:7px 0 6px;overflow:hidden}.fill{height:100%;border-radius:3px;background:var(--go);transition:width 1.2s cubic-bezier(.2,.8,.2,1)}.fill.low{background:var(--warn)}.fill.empty{background:var(--stop)}
+    .reset{color:var(--dim);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .recent-num{font:600 20px var(--num);white-space:nowrap}.recent-num.none{color:var(--faint)}.recent-sub{color:var(--faint);font-size:12px}
+    .actions{display:flex;align-items:center;justify-content:flex-end;gap:10px}
+    .toggle{position:relative;flex:none;width:46px;height:26px;border-radius:999px;border:1px solid var(--line2);background:#07080a;padding:0}
+    .toggle::after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:var(--faint);transition:left .3s cubic-bezier(.2,.8,.2,1),background .3s}
+    .toggle.enabled{background:rgba(127,214,185,.18);border-color:rgba(127,214,185,.45)}.toggle.enabled::after{left:23px;background:var(--go)}
+    .more{flex:none;width:34px;height:34px;border-radius:50%;border:1px solid var(--line);background:transparent;color:var(--dim);display:grid;place-items:center}.more:hover{color:var(--ivory)}.more svg{transition:transform .3s}.more[aria-expanded="true"] svg{transform:rotate(180deg)}
+    .relogin{padding:7px 14px;font-size:13px}
+
+    .status-details{grid-column:1/-1;border-top:1px dashed var(--line);padding-top:14px;margin-top:-4px;display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px 26px;font-size:12px;color:var(--dim)}
+    .status-details p{margin:0;overflow-wrap:anywhere}.status-details p b{display:block;font-weight:400;color:var(--faint);font-size:11px;margin-bottom:2px}.status-details .warning{color:var(--warn)}
+    .detail-tools{grid-column:1/-1;display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap}.priority{display:flex;align-items:center;gap:6px}
+    .priority input{width:64px;padding:6px 8px;border-radius:8px;border:1px solid var(--line2);background:#07080a;text-align:center}.priority button,.detail-tools>button{padding:6px 12px;font-size:12px}
+    .empty{padding:50px 20px;text-align:center;color:var(--dim)}.empty strong{display:block;color:var(--ivory);font-size:16px;margin-bottom:6px}
+    .footnote{color:var(--faint);font-size:12px;margin-top:18px}
+
+    dialog{border:1px solid var(--line2);border-radius:16px;padding:0;max-width:520px;width:calc(100% - 32px);background:var(--panel);color:var(--ivory);box-shadow:0 24px 100px #000c}dialog::backdrop{background:#000a;backdrop-filter:blur(3px)}
+    .modal-head{display:flex;justify-content:space-between;align-items:center;padding:18px 22px;border-bottom:1px solid var(--line)}.modal-head h2{margin:0;font:600 24px var(--num)}
+    .close{width:34px;height:34px;border-radius:50%;border:1px solid var(--line);background:transparent;font-size:18px;line-height:1}
+    .modal-body{padding:20px 22px}.modal-body>p{color:var(--dim);margin:0 0 14px}
+    .login-field{display:block;margin-bottom:16px;font-size:13px;color:var(--dim)}.login-field select,.login-field input{display:block;width:100%;margin-top:7px;padding:10px 12px;border:1px solid var(--line2);border-radius:10px;background:#07080a;color:var(--ivory)}.login-field small{display:block;color:var(--faint);margin-top:7px}
+    .login-target{font-size:13px;color:var(--dim);overflow-wrap:anywhere;margin-bottom:12px}
+    .login-state{padding:12px 14px;border-radius:10px;border:1px solid rgba(127,214,185,.25);background:rgba(127,214,185,.06);margin-bottom:14px}.login-state strong{display:block;font:600 19px var(--num);color:var(--go)}.login-state p{margin:4px 0 0;font-size:12px;color:var(--dim)}
+    .login-state[data-status="failed"],.login-state[data-status="unknown"],.login-state[data-status="expired"]{border-color:rgba(242,184,75,.35);background:rgba(242,184,75,.07)}.login-state[data-status="failed"] strong,.login-state[data-status="unknown"] strong,.login-state[data-status="expired"] strong{color:var(--warn)}
+    .login-expiry{font-size:12px;color:var(--faint);margin:0 0 10px}.login-error{color:var(--stop);font-size:12px;overflow-wrap:anywhere;margin-bottom:12px}
+    .auth-link{display:inline-block;background:var(--go);color:#0b1a14;text-decoration:none;padding:9px 18px;border-radius:999px;margin-bottom:14px}
+    .login-actions{display:flex;gap:9px;flex-wrap:wrap;margin:16px 0}.modal-note{font-size:12px;color:var(--faint);margin:0}
+
+    @media(max-width:1180px){
+      .head,.account{grid-template-columns:minmax(190px,1.2fr) 150px minmax(130px,1fr) minmax(130px,1fr) 170px;gap:20px}
+      .recent,.head .recent-head{display:none}
+    }
+    @media(max-width:760px){
+      body{padding:18px 14px 24px}
+      header{flex-direction:column;gap:12px;margin-bottom:8px}.now{font-size:30px}.now-label,.reference-note{font-size:12px}
+      .controls{width:100%;justify-content:flex-start;padding-top:0}.stamp{margin-right:auto}.search{flex:1 1 100%;width:auto;order:3}#reauth,#add{order:4;flex:1}
+      .timeline{height:122px;margin:10px 0 14px}.tl-mark{max-width:62%}.tl-mark .lbl{font-size:13px}
+      .head{display:none}
+      .account{grid-template-columns:1fr 1fr;grid-template-areas:"name name" "status actions" "q5 q7" "det det";gap:12px 16px;padding:14px}
+      .identity{grid-area:name}.state-box{grid-area:status;min-width:0}.actions{grid-area:actions}.q5{grid-area:q5}.q7{grid-area:q7}.status-details{grid-area:det;grid-template-columns:1fr 1fr;gap:10px 14px}
+      .account-name{font-size:22px}.qn{position:static;width:auto;height:auto;clip:auto}.status{font-size:19px}.meter-num{font-size:20px}.relogin{padding:6px 10px}
+    }
+    @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+  </style>
+</head>
+<body>
+  <header>
+    <div id="reference" class="reference">
+      <div class="now-label">5 小时额度最充足</div>
+      <div class="now"><span id="reference-name">等待 VPS 数据</span> <span class="left">还剩 <span id="reference-value">未知</span></span></div>
+      <div class="reference-note">额度参考，不代表实际调度或已验证登录 · <b id="total">—</b> 个账号 · <b id="enabled">—</b> 个启用 · <span class="bad"><b id="invalid">—</b> 个需重新登录</span></div>
+    </div>
+    <div class="controls">
+      <span id="updated" class="stamp">最近成功读取：尚无记录</span>
+      <label class="sr-only" for="search">搜索账号</label><input id="search" class="search" type="search" placeholder="搜索邮箱" autocomplete="off">
+      <button id="reauth" class="pill">重新登录</button>
+      <button id="add" class="pill go">＋ 添加账号</button>
+      <button id="refresh" class="icon" title="读取 VPS 状态" aria-label="读取 VPS 状态"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg></button>
+    </div>
+  </header>
+  <div id="notice" class="notice" role="status" aria-live="polite"></div>
+  <div id="freshness-warning" class="freshness-warning" role="status" hidden></div>
+  <section id="timeline" class="timeline" aria-label="未来 5 小时已知额度重置"></section>
+  <div class="head" aria-hidden="true"><span>账号 · <span id="count">—</span></span><span>现在</span><span>5 小时额度</span><span>每周额度</span><span class="recent-head">最近请求</span><span></span></div>
+  <div id="accounts" class="list" aria-busy="true"><div class="empty"><strong>正在读取账号…</strong>连接 VPS 账号池</div></div>
+  <footer class="footnote">数据来自 VPS，与本机 ccam 独立 · VPS 后台约每 5 分钟自动验证并按需续期，关闭网页仍运行 · 页面每 60 秒读取 · 限流时自动延后 · 请求记录不保证成功</footer>
+  <dialog id="help" aria-labelledby="help-title">
+    <div class="modal-head"><h2 id="help-title">添加账号</h2><button id="close" class="close" aria-label="关闭登录流程">×</button></div>
+    <div class="modal-body">
+      <p id="help-description">在 VPS 发起官方登录，再在自己的浏览器完成授权。</p>
+      <label id="target-field" class="login-field" hidden>选择重新登录的账号<select id="login-target"></select></label>
+      <div id="fixed-target" class="login-target" hidden></div>
+      <div id="login-state" class="login-state" role="status" aria-live="polite"><strong id="login-state-title">准备开始</strong><p id="login-state-detail">账号密码只在官方登录页面输入，本页不收集账号密码。</p></div>
+      <p id="login-expiry" class="login-expiry" hidden></p>
+      <div id="login-error" class="login-error" role="alert" hidden></div>
+      <a id="authorization-link" class="auth-link" target="_blank" rel="noopener noreferrer" hidden>打开官方授权页面 ↗</a>
+      <form id="code-form" hidden>
+        <label class="login-field">官方页面显示的授权码<input id="authorization-code" type="password" autocomplete="off" spellcheck="false" autocapitalize="off" aria-label="官方授权码"><small>粘贴完整授权码（保留 # 后内容），不要粘贴回调网址。若自动完成授权，请等待状态更新。</small></label>
+        <button id="submit-code" class="pill go" type="submit">提交授权码</button>
+      </form>
+      <div class="login-actions"><button id="start-login" class="pill go">发起登录</button><button id="cancel-login" class="pill" hidden>取消本次登录</button><button id="query-login" class="pill" hidden>查询最新状态</button><button id="done-login" class="pill" hidden>完成</button></div>
+      <p class="modal-note">凭据只保存在 VPS，勿将授权码或链接发给他人。关闭进行中的流程会先请求取消，确认后才关闭。</p>
+    </div>
+  </dialog>
+  <script>
+    'use strict';
+    const $ = id => document.getElementById(id);
+    let profiles = [], csrf = '', loading = false, saving = false, lastReadAt = null, readFailed = false;
+    const dirty = new Map(), expanded = new Set();
+    const states = {eligible:'后台可调度',healthy:'后台可调度',active:'后台使用中',draining:'额度将尽',exhausted:'额度已用尽',auth_invalid:'需要重新登录',cooldown:'冷却中',disabled:'已停用'};
+    const probeText = {auth:'额度检测认证/权限异常，登录有效性待确认',rate_limited:'额度检测受限',failure:'额度检测失败',unknown:'未提供检测结果'};
+    const probeShort = {auth:'额度检测 401/403 · 登录待确认',rate_limited:'额度检测受限',failure:'额度检测失败'};
+    function node(tag, className, text) { const e=document.createElement(tag);if(className)e.className=className;if(text!==undefined)e.textContent=text;return e; }
+    function toMillis(value){if(value===null||value===undefined||value==='')return NaN;return new Date(typeof value==='number'?value*1000:value).getTime();}
+    function dateText(value){const t=toMillis(value);return Number.isNaN(t)?'未知':new Date(t).toLocaleString('zh-CN');}
+    function span(ms){const m=Math.max(1,Math.ceil(ms/60000));if(m<60)return m+'分';const h=Math.floor(m/60);if(h<24)return h+'小时'+(m%60?m%60+'分':'');return Math.floor(h/24)+'天'+(h%24?h%24+'小时':'');}
+    function untilReset(value){const t=toMillis(value);if(Number.isNaN(t))return null;return t-Date.now();}
+    function resetText(value){const left=untilReset(value);return left===null?'重置时间未知':left<=0?'已到重置时间 · 待刷新':span(left)+'后重置';}
+    function isFull(used){return typeof used==='number'&&used>=100;}
+    function remaining(used){return typeof used==='number'&&Number.isFinite(used)?Math.round(Math.max(0,Math.min(100,100-used))):null;}
+    function splitEmail(name){const text=String(name);const at=text.lastIndexOf('@');return at>0?[text.slice(0,at),text.slice(at)]:[text,''];}
+    function notice(message, success=false) { $('notice').textContent=message;$('notice').className='notice visible'+(success?' success':'');clearTimeout(notice.timer);if(success)notice.timer=setTimeout(()=>{$('notice').className='notice';},4000); }
+    function failure(status) { return status===429?'请求暂时受限（429），请稍后再试。':status===401?'登录已失效，请重新载入页面并输入管理员账号密码。':status===403?'安全验证失败，请刷新页面后重试。':status===409?'登录流程进行中，请完成或取消后再修改账号设置。':`请求失败（${status}），请稍后重试。`; }
+
+    function authStale(p){return p.auth_status==='valid'&&(!p.auth_checked_at||Date.now()-p.auth_checked_at*1000>600000);}
+    const authWords={valid:'登录正常',expired:'登录过期',forbidden:'登录权限异常',rate_limited:'登录检测受限',error:'登录检测失败',pending:'等待自动检测'};
+    function verdict(p){
+      const left5=remaining(p.usage_5h_percent);
+      if(p.state==='auth_invalid'||p.auth_status==='expired')return ['stop','需要重新登录','登录过期 · 自动续期未恢复'];
+      if(!p.enabled)return ['off','已停用','不参与调度'];
+      if(authStale(p))return ['warn','登录状态待更新','最近验证已超过 10 分钟'];
+      if(['forbidden','rate_limited','error','pending'].includes(p.auth_status))return ['warn',authWords[p.auth_status],'后台自动检查，无需手动刷新'];
+      if(p.state==='disabled')return ['off',states.disabled,'后台状态'];
+      if(isFull(p.usage_7d_percent))return ['stop','本周已满',untilReset(p.usage_7d_resets_at)>0?span(untilReset(p.usage_7d_resets_at))+'后恢复':'恢复时间未知'];
+      if(isFull(p.usage_5h_percent))return ['stop','5 小时已满',untilReset(p.usage_5h_resets_at)>0?span(untilReset(p.usage_5h_resets_at))+'后恢复':'恢复时间未知'];
+      if(p.state==='exhausted')return ['stop',states.exhausted,'后台状态'];
+      if(p.state==='cooldown'||p.state==='draining')return ['warn',states[p.state],'后台状态'];
+      if(left5!==null&&left5<=15)return ['warn','快满了','5 小时还剩 '+left5+'%'];
+      if(p.auth_status==='valid')return ['sched','登录正常','后台自动检测通过'];
+      if(states[p.state])return ['sched',states[p.state],''];
+      return ['off','状态未知','后台未提供'];
+    }
+    function freshness() {
+      const stale=lastReadAt!==null&&Date.now()-lastReadAt>120000;const outdated=readFailed||stale;
+      $('freshness-warning').hidden=!outdated;$('freshness-warning').textContent=readFailed?(lastReadAt!==null?'读取失败，显示上次数据。请重新读取 VPS 状态。':'读取失败，尚无可信列表数据。'):'超过 2 分钟未刷新，显示上次数据。';
+      $('accounts').classList.toggle('stale',outdated);
+      $('updated').textContent=lastReadAt===null?'最近成功读取：尚无记录':'最近成功读取：'+(new Date(lastReadAt).toDateString()===new Date().toDateString()?new Date(lastReadAt).toLocaleTimeString('zh-CN'):new Date(lastReadAt).toLocaleString('zh-CN'))+(outdated?' · 数据待更新':'');
+      document.querySelectorAll('.next-probe').forEach(e=>{const timestamp=Number(e.dataset.timestamp);e.textContent=timestamp*1000<=Date.now()?'已到可重试时间，尚无新检测结果':'最早可重试检测：'+dateText(timestamp);});
+      $('reference').classList.toggle('stale',outdated);boardOverview();
+    }
+    function boardOverview(){
+      const candidate=profiles.filter(p=>p.enabled&&p.state!=='auth_invalid'&&p.auth_status!=='expired'&&!isFull(p.usage_7d_percent)&&remaining(p.usage_5h_percent)!==null).sort((a,b)=>a.usage_5h_percent-b.usage_5h_percent)[0];
+      $('reference-value').textContent=candidate?remaining(candidate.usage_5h_percent)+'%':'未知';$('reference-name').textContent=candidate?candidate.name:'暂无可靠额度数据';$('reference').classList.toggle('none',!candidate);
+      const total=18000000,now=Date.now(),events=[];
+      for(const p of profiles)for(const [field,label] of [['usage_5h_resets_at','5 小时'],['usage_7d_resets_at','每周']]){const at=toMillis(p[field]);if(at>now&&at<=now+total)events.push({name:p.name,label,at});}
+      events.sort((a,b)=>a.at-b.at);
+      const groups=[];for(const e of events){const last=groups[groups.length-1];if(last&&e.at-last[0].at<=600000)last.push(e);else groups.push([e]);}
+      const box=$('timeline');box.replaceChildren(node('div','tl-axis'),node('div','tl-now'));
+      for(let hour=1;hour<=5;hour++){const tick=node('div','tl-tick'+(hour===5?' last':''),hour+' 小时');tick.style.left=(hour*20)+'%';box.append(tick);}
+      // 标签上下交替；越界改为贴边对齐；同侧重叠先收窄并重新测量，仍放不下只留圆点（标题/读屏提供完整邮箱与时间）。
+      const ends={up:-Infinity,down:-Infinity},origin=box.getBoundingClientRect().left,width=box.clientWidth;
+      groups.forEach((group,i)=>{
+        const pct=(group[0].at-now)/total*100;const kinds=new Set(group.map(e=>e.label)),names=new Set(group.map(e=>e.name));
+        const mark=node('div','tl-mark');mark.style.left=pct+'%';mark.dataset.count=String(group.length);
+        mark.title=group.map(e=>e.name+' · '+e.label+' · '+new Date(e.at).toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'})+' 重置').join('\n');mark.setAttribute('role','img');mark.setAttribute('aria-label',mark.title);
+        const label=node('div','lbl',names.size===1?splitEmail(group[0].name)[0]:names.size+' 个账号'),sub=node('div','sub',(kinds.size===1?[...kinds][0]:'5 小时 + 每周')+' · '+span(group[0].at-now)+'后重置');
+        box.append(mark);
+        const measure=()=>{const rect=mark.getBoundingClientRect();return [rect.left-origin,rect.right-origin];};
+        const place=(side,maxWidth)=>{mark.className='tl-mark '+side;mark.style.left=pct+'%';mark.style.maxWidth=maxWidth?maxWidth+'px':'';mark.replaceChildren(...(side==='up'?[label,sub,node('div','pin'),node('div','dot')]:[node('div','dot'),node('div','pin'),label,sub]));
+          let [left,right]=measure();if(left<0)mark.classList.add('start');else if(right>width)mark.classList.add('end');if(left<0||right>width)[left,right]=measure();if(left<0){mark.style.left=`calc(${pct}% + ${-left}px)`;[left,right]=measure();}return [left,right];};
+        const fits=(side,maxWidth)=>{const [left,right]=place(side,maxWidth);if(left>=ends[side]+10&&right<=width+1){ends[side]=right;return true;}return false;};
+        const sides=i%2===0?['up','down']:['down','up'];
+        if(sides.some(side=>fits(side)))return;
+        for(const side of [...sides].sort((a,b)=>ends[a]-ends[b])){
+          const [left,right]=place(side);const overlap=ends[side]+10-left;const factor=mark.classList.contains('start')?0:mark.classList.contains('end')?1:2;
+          if(factor&&right-left-overlap*factor>=64&&fits(side,right-left-overlap*factor))return;
+        }
+        mark.className='tl-mark bare';mark.style.maxWidth='';mark.replaceChildren(node('div','pin'),node('div','dot'));
+      });
+      if(!groups.length)box.append(node('div','tl-empty','尚无未来 5 小时内的已知重置数据'));
+    }
+    function quota(used, reset, area, name) {
+      const e=node('div','quota '+area);const left=remaining(used);const top=node('div','meter-top');const num=node('span','meter-num'+(left===null?' unknown':''),left===null?'—':String(left));
+      if(left!==null)num.append(node('small','','%'));const tag=node('span','meter-label');tag.append(node('span','qn',name+' '),document.createTextNode(left===null?'未知':'剩余'));top.append(num,tag);
+      const track=node('div','track');if(left!==null){const fill=node('div','fill'+(left===0?' empty':left<=15?' low':''));fill.style.width=left+'%';track.append(fill);}
+      e.append(top,track,node('div','reset',left===0?'已用完 · '+resetText(reset):resetText(reset)));return e;
+    }
+    function statusDetails(p) {
+      const detail=node('div','status-details');detail.hidden=!expanded.has(p.id);detail.id='details-'+p.id;
+      const item=(text,cls='')=>node('p',cls,text);
+      detail.append(item('登录验证时间：'+dateText(p.auth_checked_at)));
+      if(p.auth_status)detail.append(item('自动登录检测：'+(authStale(p)?'结果已陈旧':authWords[p.auth_status]||'未知')));
+      if(p.auth_last_success_at)detail.append(item('最近验证成功：'+dateText(p.auth_last_success_at)));
+      if(p.auth_next_check_at)detail.append(item('下次自动检测：'+dateText(p.auth_next_check_at)));
+      const abnormal=['auth','rate_limited','failure'].includes(p.probe_status);detail.append(item(probeText[p.probe_status]||probeText.unknown,abnormal?'warning':''));
+      const next=item('可重试时间：未知');if(typeof p.next_probe_at==='number'){next.className='next-probe';next.dataset.timestamp=String(p.next_probe_at);}detail.append(next);
+      detail.append(item('最近请求记录：'+dateText(p.last_used_at)+'（不保证请求成功）'),item('后台调度状态：'+(p.enabled?(states[p.state]||'状态未知'):'已停用')));
+      if(isFull(p.usage_5h_percent))detail.append(item('5小时额度已满（后台数值）','warning'));
+      if(isFull(p.usage_7d_percent))detail.append(item('本周额度已满（后台数值）','warning'));
+      const tools=node('div','detail-tools');const priority=node('label','priority');priority.append(node('span','','优先级'));
+      const input=node('input');input.type='number';input.min='1';input.max='999';input.step='1';input.value=dirty.has(p.id)?dirty.get(p.id):p.priority;input.setAttribute('aria-label',`${p.name} 的优先级`);input.disabled=saving;
+      const save=node('button','pill','保存');save.disabled=saving||!dirty.has(p.id);input.addEventListener('input',()=>{dirty.set(p.id,input.value);expanded.add(p.id);save.disabled=false;});
+      save.addEventListener('click',()=>{const value=Number(input.value);if(!input.value||!Number.isInteger(value)||value<1||value>999){notice('优先级必须是 1 至 999 的整数。');input.focus();return;}patch(p,{priority:value},save);});
+      priority.append(input);const relogin=node('button','pill','重新登录此账号');relogin.addEventListener('click',()=>openLogin('reauth',p.id));tools.append(priority,save,relogin);detail.append(tools);
+      return detail;
+    }
+    function render() {
+      const query=$('search').value.trim().toLowerCase();const visible=profiles.filter(p=>String(p.name).toLowerCase().includes(query));
+      $('total').textContent=profiles.length;$('enabled').textContent=profiles.filter(p=>p.enabled).length;$('invalid').textContent=profiles.filter(p=>p.state==='auth_invalid'||p.auth_status==='expired').length;$('count').textContent=query?`${visible.length} / ${profiles.length}`:profiles.length;
+      const list=$('accounts');list.replaceChildren();
+      if(!visible.length){const empty=node('div','empty');empty.append(node('strong','',query?'没有匹配的账号':'还没有账号'),node('span','',query?'试试其他邮箱。':'点击“添加账号”，在 VPS 上完成首次登录。'));list.append(empty);freshness();return;}
+      for(const p of visible){
+        const [tone,word,sub]=verdict(p);const open=expanded.has(p.id);
+        const row=node('article','account'+(tone==='off'||(tone==='stop'&&p.state!=='auth_invalid')?' dim':'')+(open?' open':''));row.setAttribute('aria-label',p.name);
+        const identity=node('div','identity');const name=node('div','account-name');name.title=p.name;const [local,domain]=splitEmail(p.name);name.append(node('span','local',local),node('span','domain',domain));identity.append(name,node('span','stale-tag','数据待更新'));
+        const stateBox=node('div','state-box');const probe=p.state==='auth_invalid'?null:probeShort[p.probe_status];stateBox.append(node('div','status '+tone,word),node('div','status-sub'+(probe?' warning':''),probe||[sub,'优先级 '+p.priority].filter(Boolean).join(' · ')));
+        const last=toMillis(p.last_used_at);const recent=node('div','recent');recent.title='最近请求记录，不保证请求成功';
+        recent.append(node('div','recent-num'+(Number.isNaN(last)?' none':''),Number.isNaN(last)?'无记录':Date.now()-last<60000?'刚刚':span(Date.now()-last)+'前'),node('div','recent-sub',Number.isNaN(last)?'':new Date(last).toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'})));
+        const actions=node('div','actions');
+        if(p.state==='auth_invalid'||p.auth_status==='expired'){const relogin=node('button','pill go relogin','重新登录');relogin.addEventListener('click',()=>openLogin('reauth',p.id));actions.append(relogin);}
+        const toggle=node('button','toggle'+(p.enabled?' enabled':''));toggle.setAttribute('role','switch');toggle.setAttribute('aria-checked',String(p.enabled));toggle.setAttribute('aria-label',`${p.name} 启用状态`);toggle.title=p.enabled?'已启用 · 点击停用':'已停用 · 点击启用';toggle.disabled=saving;toggle.addEventListener('click',()=>patch(p,{enabled:!p.enabled},toggle));
+        const more=node('button','more');more.setAttribute('aria-expanded',String(open));more.setAttribute('aria-controls','details-'+p.id);more.setAttribute('aria-label',`${p.name} 详情`);more.innerHTML='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>';
+        more.addEventListener('click',()=>{const next=!expanded.has(p.id);if(next)expanded.add(p.id);else expanded.delete(p.id);more.setAttribute('aria-expanded',String(next));row.classList.toggle('open',next);row.querySelector('.status-details').hidden=!next;if(!next&&dirty.has(p.id))notice('该账号有未保存的优先级修改，自动刷新已暂停。');});
+        actions.append(toggle,more);
+        row.append(identity,stateBox,quota(p.usage_5h_percent,p.usage_5h_resets_at,'q5','5 小时'),quota(p.usage_7d_percent,p.usage_7d_resets_at,'q7','每周'),recent,actions,statusDetails(p));list.append(row);
+      }
+      freshness();
+    }
+    async function load(manual=false) {
+      if(loading||saving)return;loading=true;$('refresh').disabled=true;$('accounts').setAttribute('aria-busy','true');if(manual){$('refresh').classList.add('spin');setTimeout(()=>$('refresh').classList.remove('spin'),650);}
+      try {const response=await fetch('/api/profiles',{credentials:'same-origin',cache:'no-store'});if(!response.ok)throw new Error(failure(response.status));const data=await response.json();profiles=data.profiles;csrf=data.csrf_token;lastReadAt=Date.now();readFailed=false;render();if(manual)notice('已读取 VPS 状态；这不会强制验证登录或检测额度。',true);}
+      catch(error){readFailed=true;notice(error instanceof TypeError?'连接失败，请检查网络后重试。':error.message);if(!profiles.length){$('accounts').replaceChildren(node('div','empty','未能读取账号。请点击右上角刷新重试。'));}}
+      finally{loading=false;$('refresh').disabled=false;$('accounts').setAttribute('aria-busy','false');freshness();}
+    }
+    async function patch(profile, changes, button) {
+      if(saving||loading)return;saving=true;button.setAttribute('aria-busy','true');if(button.classList.contains('pill'))button.textContent='保存中…';document.querySelectorAll('.account button,.account input').forEach(e=>e.disabled=true);
+      try{const response=await fetch('/api/profiles/'+encodeURIComponent(profile.id),{method:'PATCH',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRF-Token':csrf},body:JSON.stringify(changes)});if(!response.ok)throw new Error(failure(response.status));Object.assign(profile,changes);if('priority' in changes)dirty.delete(profile.id);notice('账号设置已保存。',true);}
+      catch(error){notice(error instanceof TypeError?'连接中断，保存结果尚未确认。请刷新列表核对后再操作。':error.message);}
+      finally{saving=false;render();}
+    }
+    const loginKey='relay-admin-login-id';
+    const finalStates=new Set(['succeeded','failed','cancelled','expired']);
+    const loginLabels={starting:['正在发起登录','正在等待 VPS 创建官方授权链接。'],waiting:['等待官方授权','打开官方页面完成授权；如果获得授权码，可在下方提交。'],submitting:['正在验证授权','授权码已提交，请等待 VPS 确认结果，不要重复提交。'],succeeded:['登录成功','账号已保存到 VPS，账号列表已刷新。'],failed:['登录未完成','本次登录失败，没有确认添加成功。'],cancelled:['已取消','VPS 已确认取消本次登录。'],expired:['登录已过期','本次流程已结束，请关闭后重新发起。'],unknown:['结果尚未确认','不会自动重试提交。请查询最新状态，或请求取消此流程。']};
+    let login=null,loginMode='add',loginBusy=false,pollTimer=null,polling=false,codeAttempted=false,cancelAttempted=false,closeWhenTerminal=false,startUnknown=false,loginEpoch=0;
+    function savedLoginId(){try{return sessionStorage.getItem(loginKey);}catch{return null;}}
+    function rememberLogin(id){try{if(id)sessionStorage.setItem(loginKey,id);else sessionStorage.removeItem(loginKey);}catch{}}
+    function isFinal(){return login&&finalStates.has(login.status);}
+    function safeAuthorization(value){
+      if(typeof value!=='string')return null;
+      try{const url=new URL(value);return url.protocol==='https:'&&!url.username&&!url.password&&!url.port&&url.hostname==='claude.com'&&url.pathname==='/cai/oauth/authorize'?url.href:null;}catch{return null;}
+    }
+    function loginError(message){$('login-error').textContent=message;$('login-error').hidden=!message;}
+    function paintLogin(){
+      const status=login?login.status:startUnknown?'unknown':'ready';const final=isFinal();const [title,detail]=loginLabels[status]||['准备开始','账号密码只在官方登录页面输入，本页不收集账号密码。'];
+      $('login-state').dataset.status=status;$('login-state-title').textContent=title;$('login-state-detail').textContent=detail;
+      const started=Boolean(login)||startUnknown;$('login-target').disabled=started||loginBusy;$('target-field').hidden=loginMode!=='reauth'||started;
+      $('start-login').hidden=started;$('start-login').disabled=loginBusy||!csrf||(loginMode==='reauth'&&!$('login-target').value);
+      $('start-login').textContent=loginBusy?'正在发起…':'发起登录';
+      $('cancel-login').hidden=!login||final;$('cancel-login').disabled=loginBusy||cancelAttempted;
+      $('cancel-login').textContent=cancelAttempted?'取消结果待确认':'取消本次登录';
+      $('query-login').hidden=(!login&&!startUnknown)||final;$('query-login').disabled=loginBusy||polling;
+      $('done-login').hidden=!final;$('close').disabled=loginBusy;
+      const authorization=status==='waiting'?safeAuthorization(login.authorization_url):null;
+      $('authorization-link').hidden=!authorization;
+      if(authorization)$('authorization-link').href=authorization;else $('authorization-link').removeAttribute('href');
+      $('code-form').hidden=status!=='waiting'||!authorization||codeAttempted||cancelAttempted;
+      $('submit-code').disabled=loginBusy||codeAttempted;
+      $('login-expiry').hidden=!login?.expires_at;
+      $('login-expiry').textContent=login?.expires_at?'有效期至 '+new Date(login.expires_at*1000).toLocaleTimeString('zh-CN'):'';
+      if(status==='waiting'&&login.authorization_url&&!authorization)loginError('服务器返回的授权地址未通过安全检查，已禁止打开。请取消本次登录并联系管理员。');
+      if(startUnknown&&!login){$('login-state-detail').textContent='发起请求结果未知。正在查询服务器上的当前流程，不会自动重新发起登录。';}
+    }
+    function acceptLogin(value){
+      if(!value||typeof value.login_id!=='string'||!Object.hasOwn(loginLabels,value.status))throw new Error('invalid_login_response');
+      if(login&&value.login_id!==login.login_id)throw new Error('login_identity_changed');
+      const firstSuccess=value.status==='succeeded'&&login?.status!=='succeeded';login=value;startUnknown=false;
+      if(value.status==='submitting')codeAttempted=true;
+      if(isFinal()){rememberLogin(null);clearTimeout(pollTimer);$('authorization-code').value='';}
+      else rememberLogin(value.login_id);
+      if(value.error_code)loginError('登录流程未完成（'+String(value.error_code).slice(0,100)+'）。');
+      paintLogin();if(firstSuccess)load();
+      if(closeWhenTerminal&&isFinal()){$('help').close();closeWhenTerminal=false;}
+      if(!isFinal())schedulePoll();
+    }
+    function schedulePoll(){clearTimeout(pollTimer);pollTimer=setTimeout(queryLogin,2000);}
+    async function loginRequest(path,body){
+      const options={credentials:'same-origin',cache:'no-store',signal:AbortSignal.timeout(20000)};
+      if(body!==undefined)Object.assign(options,{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':csrf},body:JSON.stringify(body)});
+      const response=await fetch(path,options);const data=await response.json();
+      if(!response.ok){const error=new Error(failure(response.status));error.confirmedRejection=response.status>=400&&response.status<500&&response.status!==408&&data.error!=='login_operation_unconfirmed'&&data.error_code!=='login_operation_unconfirmed';error.response=data;throw error;}
+      return data;
+    }
+    async function queryLogin(){
+      if(!login||isFinal()||polling||loginBusy)return;
+      polling=true;const epoch=loginEpoch;paintLogin();
+      try{const result=await loginRequest('/api/logins/'+encodeURIComponent(login.login_id));if(epoch===loginEpoch&&!isFinal()){loginError('');acceptLogin(result);}}
+      catch(error){if(epoch===loginEpoch&&!isFinal())loginError('暂时无法确认状态。'+(error.confirmedRejection?error.message:'连接中断或响应无效，请稍后查询。'));}
+      finally{polling=false;paintLogin();if(login&&!isFinal())schedulePoll();}
+    }
+    function openLogin(mode,target){
+      if(login&&!isFinal()||startUnknown){$('help').showModal();paintLogin();return;}
+      login=null;loginMode=mode;codeAttempted=false;cancelAttempted=false;closeWhenTerminal=false;loginBusy=false;
+      $('help-title').textContent=mode==='add'?'添加账号':'重新登录账号';$('help-description').textContent=mode==='add'?'在 VPS 发起官方登录，将账号加入统一账号池。':'选择需要重新登录的账号，授权期间目标账号不会改变。';
+      $('login-target').replaceChildren();for(const p of profiles){const option=node('option','',p.name);option.value=p.id;$('login-target').append(option);}if(target)$('login-target').value=target;
+      $('fixed-target').hidden=true;$('authorization-code').value='';loginError('');paintLogin();$('help').showModal();
+    }
+    async function startLogin(){
+      if(loginBusy||login||startUnknown||!csrf)return;
+      const payload=loginMode==='reauth'?{mode:'reauth',profile_id:$('login-target').value}:{mode:'add'};
+      if(loginMode==='reauth'&&!payload.profile_id)return;
+      loginBusy=true;loginEpoch++;loginError('');paintLogin();
+      $('fixed-target').hidden=false;$('fixed-target').textContent=loginMode==='reauth'?'重新登录：'+$('login-target').selectedOptions[0].textContent:'添加一个新账号';
+      try{acceptLogin(await loginRequest('/api/logins',payload));}
+      catch(error){if(error.response?.login_id){acceptLogin(error.response);}else if(error.confirmedRejection){loginError(error.message);}else{startUnknown=true;loginError('启动结果未知。请勿重复提交。');}}
+      finally{loginBusy=false;paintLogin();if(startUnknown)recoverCurrent();}
+    }
+    async function submitCode(event){
+      event.preventDefault();if(loginBusy||!login||login.status!=='waiting'||codeAttempted||cancelAttempted)return;
+      let code=$('authorization-code').value.trim();$('authorization-code').value='';if(!code){loginError('请先粘贴官方页面显示的授权码。');return;}
+      if(code.length<8||code.length>2048||/[^\x20-\x7e]/.test(code)||/^https?:\/\//i.test(code)){code='';loginError('请输入完整的单行授权码（8–2048 个字符），不要粘贴网址。');return;}
+      codeAttempted=true;loginBusy=true;loginEpoch++;loginError('');paintLogin();
+      try{acceptLogin(await loginRequest('/api/logins/'+encodeURIComponent(login.login_id)+'/code',{code}));}
+      catch(error){if(error.response?.login_id)acceptLogin(error.response);else{login={...login,status:'unknown'};loginError(error.confirmedRejection?error.message:'授权码提交结果未知，不会自动重试。请查询状态。');}}
+      finally{code='';loginBusy=false;paintLogin();if(!isFinal())schedulePoll();}
+    }
+    async function cancelLogin(closeAfter=false){
+      if(loginBusy)return;
+      if(!login){if(startUnknown){loginError('尚无流程编号，无法确认取消。请等待服务器超时或联系管理员，不能当作已取消。');return;}$('help').close();return;}
+      if(isFinal()){$('help').close();return;}
+      closeWhenTerminal=closeAfter;
+      if(cancelAttempted){loginError('取消请求结果尚未确认，请查询最新状态。');queryLogin();return;}
+      cancelAttempted=true;loginBusy=true;loginEpoch++;loginError('');paintLogin();
+      try{acceptLogin(await loginRequest('/api/logins/'+encodeURIComponent(login.login_id)+'/cancel',{}));}
+      catch(error){if(error.response?.login_id)acceptLogin(error.response);else{login={...login,status:'unknown'};loginError('取消结果尚未确认，窗口保持打开，请查询最新状态。');}}
+      finally{loginBusy=false;paintLogin();if(!isFinal())schedulePoll();}
+    }
+    async function recoverCurrent(){
+      if(loginBusy||polling)return;polling=true;paintLogin();
+      try{
+        const result=await loginRequest('/api/logins/current');
+        if(result.status==='idle'){
+          if(startUnknown)loginError('服务器暂未返回进行中的登录。启动结果仍未确认，请稍后查询，不要重复发起。');
+        }else{
+          loginError('');if(!login&&!finalStates.has(result.status)){$('help-title').textContent='恢复登录流程';$('fixed-target').hidden=false;$('fixed-target').textContent='已恢复服务器上的流程，目标保持不变。';if(!$('help').open)$('help').showModal();}
+          if(login||startUnknown||!finalStates.has(result.status))acceptLogin(result);
+        }
+      }catch(error){if(startUnknown||login)loginError('无法恢复登录状态，请稍后查询。');}
+      finally{polling=false;paintLogin();}
+    }
+    $('search').addEventListener('input',render);$('refresh').addEventListener('click',()=>load(true));$('add').addEventListener('click',()=>openLogin('add'));$('reauth').addEventListener('click',()=>openLogin('reauth'));
+    $('start-login').addEventListener('click',startLogin);$('code-form').addEventListener('submit',submitCode);$('cancel-login').addEventListener('click',()=>cancelLogin());$('query-login').addEventListener('click',()=>login?queryLogin():recoverCurrent());$('done-login').addEventListener('click',()=>$('help').close());$('close').addEventListener('click',()=>cancelLogin(true));$('help').addEventListener('cancel',event=>{event.preventDefault();cancelLogin(true);});$('login-target').addEventListener('change',paintLogin);
+    setInterval(freshness,10000);document.addEventListener('visibilitychange',freshness);addEventListener('resize',()=>{cancelAnimationFrame(boardOverview.frame);boardOverview.frame=requestAnimationFrame(boardOverview);});
+    setInterval(()=>{if(!dirty.size&&!$('help').open)load();},60000);
+    // 管理入口每个请求都要做 scrypt 认证，且最多 2 个并发；先取字体再读列表，避免首屏并发导致 503。
+    Promise.race([Promise.allSettled([...document.fonts].map(f=>f.load())),new Promise(r=>setTimeout(r,4000))]).then(()=>load()).then(()=>{const id=savedLoginId();if(id){login={login_id:id,status:'unknown'};$('help-title').textContent='恢复登录流程';$('fixed-target').hidden=false;$('fixed-target').textContent='正在核对已发起的流程，目标保持不变。';$('help').showModal();paintLogin();queryLogin();}else recoverCurrent();});
+  </script>
+</body>
+</html>

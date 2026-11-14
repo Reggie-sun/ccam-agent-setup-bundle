@@ -1,0 +1,21 @@
+[Unit]
+Description=Claude relay account pool
+After=network-online.target
+Wants=network-online.target
+[Service]
+Type=simple
+User=claude-relay
+Group=claude-relay
+Environment=HOME=/var/lib/claude-relay
+Environment=XDG_RUNTIME_DIR=/run/claude-relay
+Environment=PYTHONUNBUFFERED=1
+RuntimeDirectory=claude-relay
+RuntimeDirectoryMode=0700
+LoadCredential=keyring-pass:/etc/claude-relay/keyring-pass
+ExecStart=/usr/bin/dbus-run-session -- /opt/claude-relay/start-cu.sh
+Restart=on-failure
+RestartSec=5
+UMask=0077
+NoNewPrivileges=true
+[Install]
+WantedBy=multi-user.target
