@@ -20,11 +20,24 @@
 
   function Fail($msg) { throw "ccam install failed: $msg" }
 
-  switch ($env:PROCESSOR_ARCHITECTURE) {
-    'AMD64' { $arch = 'amd64' }
-    'ARM64' { $arch = 'arm64' }
-    default { Fail "unsupported CPU: $env:PROCESSOR_ARCHITECTURE" }
+  function Get-InstallArchitecture($ProcessArchitecture, $NativeArchitecture) {
+    # A 32-bit PowerShell on 64-bit Windows reports x86 for the process.
+    $cpu = if ($NativeArchitecture) { $NativeArchitecture } else { $ProcessArchitecture }
+    switch ($cpu) {
+      'AMD64' { return 'amd64' }
+      'ARM64' { return 'arm64' }
+      default { Fail "unsupported CPU: $cpu" }
+    }
   }
+  function Test-InstallPath($PathValue, $Directory) {
+    foreach ($entry in ([Environment]::ExpandEnvironmentVariables($PathValue) -split ';')) {
+      if ($entry -and ($entry.Trim().Trim('"').TrimEnd('\') -ieq $Directory.TrimEnd('\'))) { return $true }
+    }
+    return $false
+  }
+
+  $dir = [IO.Path]::GetFullPath($dir)
+  $arch = Get-InstallArchitecture $env:PROCESSOR_ARCHITECTURE $env:PROCESSOR_ARCHITEW6432
   $asset = "ccam_windows_$arch.zip"
   $tmp = Join-Path ([IO.Path]::GetTempPath()) ("ccam-install-" + [Guid]::NewGuid())
   New-Item -ItemType Directory -Path $tmp | Out-Null
@@ -83,16 +96,16 @@
   # so entries such as %USERPROFILE%\bin keep their variables.
   $envKey = 'HKCU:\Environment'
   $userPath = (Get-Item $envKey).GetValue('Path', '', 'DoNotExpandEnvironmentNames')
-  $onPath = ($env:Path -split ';') + ([Environment]::ExpandEnvironmentVariables($userPath) -split ';') | Where-Object { $_ -and ($_.TrimEnd('\') -ieq $dir.TrimEnd('\')) }
-  if (-not $onPath) {
+  if (-not (Test-InstallPath $userPath $dir)) {
     $newPath = if ($userPath) { "$dir;$userPath" } else { $dir }
     Set-ItemProperty -Path $envKey -Name Path -Value $newPath -Type ExpandString
     # Tells Explorer, and so new terminals, that the environment changed.
     [Environment]::SetEnvironmentVariable('CCAM_PATH_CHANGED', $null, 'User')
-    $env:Path = "$dir;$env:Path"
     Write-Host ''
     Write-Host "Added $dir to your user PATH. Open a new terminal to use it everywhere."
   }
+  # Persistent user PATH and this shell's PATH are independent.
+  if (-not (Test-InstallPath $env:Path $dir)) { $env:Path = "$dir;$env:Path" }
   if (-not (Get-Command claude -ErrorAction SilentlyContinue)) {
     Write-Host ''
     Write-Host 'Note: Claude Code (claude) is not installed. Install it first: https://docs.claude.com/claude-code'

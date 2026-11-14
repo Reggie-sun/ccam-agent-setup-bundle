@@ -44,7 +44,7 @@ Linux GTK 桌面入口是 `/usr/bin/python3 app.py`，需要 PyGObject、GTK 4�
 
 交付副本已移除默认跳过 Claude 权限确认和关闭 WebKit 沙盒的设置；不要为启动成功重新加入这些设置。WebKit 沙盒错误时先用网页入口，按系统依赖排障。`ccam-board` 不是保证存在的命令；为买家创建快捷方式时指向实际目录，并在报告中记录。
 
-当前看板含 Linux `/proc` 活跃会话检测与 `gnome-terminal` 启动逻辑，**macOS/Windows 不能视为完整可用**。可先验证网页版额度显示；启动账号使用 `ccam run <name>`。无法验证的活跃会话信息和按钮必须明确标注不可用，不伪造成功，也不要求买家先联系卖家才能继续其余部分。不要自动迁移或重写大量平台代码。
+Windows 运行 `powershell -NoProfile -ExecutionPolicy Bypass -File .\ccam-board\start-windows.ps1`，使用 Python 3 网页入口，无需 GTK。Windows 会话检测按进程创建时间验证 ccam 锁标记，“打开”按钮在独立控制台启动 `ccam.exe run <name>`。Linux 保留 `/proc` 与 `gnome-terminal`；macOS 会话数返回未知，启动按钮提示手动执行 CLI。详细限制见 WINDOWS.md 和 ccam-board/README.md；无法验证的功能不得伪造成功。
 
 ## Install Detector
 

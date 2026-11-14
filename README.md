@@ -4,7 +4,7 @@
 
 从 START-HERE.md 开始。AGENT-GUIDE.md 是 Agent 的执行入口；每个工具的 README 与 LICENSE 随包保留。包内是源码和安装材料，不含任何账号、订阅、代理节点或个人配置，不包含预编译 ccam；可使用包内安装器获取上游构建，或按说明从源码构建。
 
-ccam 提供 Linux、macOS、Windows 入口。额度看板当前以 Linux 为基础，其他系统需适配验证；检测器的平台实现不同，Linux/Windows 文档标记 Beta。未完成客户真机或跨平台安装验证，不承诺检测结果能保证账号不受限制。
+Windows 使用说明和开发验证见 [WINDOWS.md](WINDOWS.md)。ccam 提供 Linux、macOS、Windows 入口；额度看板已增加 Windows 网页启动、会话检测及账号终端启动。检测器 Windows WPF 版仍为 Beta；真实账号和管理员安装尚需验收，不承诺检测结果能保证账号不受限制。已完成的本机验证与限制见 [实测报告](WINDOWS-TEST-REPORT.md)。
 
 ## 许可证
 

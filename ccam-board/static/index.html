@@ -202,7 +202,7 @@ function render(data) {
   const accounts = data.accounts || [];
   clock.textContent = data.loading && !accounts.length ? "讀取中" : (data.error ? "讀取失敗" : "已連線");
   if (data.loading && !accounts.length) {
-    banner.textContent = "正在讀取三個帳號的用量";
+    banner.textContent = "正在讀取帳號用量";
     board.innerHTML = "<article class='ghost'></article><article class='ghost'></article><article class='ghost'></article>";
     return;
   }
@@ -242,13 +242,23 @@ board.addEventListener("click", async (event) => {
   const name = event.target.dataset && event.target.dataset.open;
   if (!name) return;
   event.target.disabled = true;
-  const response = await fetch("/api/open", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ name })
-  });
-  event.target.disabled = false;
-  if (!response.ok) event.target.textContent = "沒打開";
+  try {
+    const response = await fetch("/api/open", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name })
+    });
+    if (!response.ok) {
+      const result = await response.json();
+      throw new Error(result.error || "沒打開");
+    }
+    event.target.textContent = "已送出";
+  } catch (error) {
+    banner.textContent = error.message;
+    event.target.textContent = "重試";
+  } finally {
+    event.target.disabled = false;
+  }
 });
 
 document.querySelector("#refresh").addEventListener("click", async (event) => {

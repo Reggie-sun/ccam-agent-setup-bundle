@@ -1,0 +1,5 @@
+* text=auto eol=lf
+*.png binary
+*.exe binary
+claude-switcher/windows/environment-patch/*.psm1 text eol=crlf
+claude-switcher/windows/environment-patch/PatchUI.ps1 text eol=crlf

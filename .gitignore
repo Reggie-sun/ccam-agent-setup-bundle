@@ -1,0 +1,7 @@
+__pycache__/
+*.py[cod]
+*.exe
+*.test
+coverage.out
+.coverage
+INSTALLATION-REPORT.md

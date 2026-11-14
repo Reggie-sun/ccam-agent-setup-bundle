@@ -6,6 +6,8 @@
 
 - Windows 10 / 11 (64 位)
 - PowerShell 5.1+（Windows 自带,无需安装）
+
+本交付包的 Windows 适配补充：安装器在写文件前检查管理员权限；重装前备份旧脚本和版本/代理模式文件；快捷方式使用 Windows 实际桌面路径（含 OneDrive 重定向），并以 STA 启动 WPF。保镖任务限定当前用户交互登录。时区使用包内完整 IANA → Windows 映射，未知值直接报错，不再默认为美国东部；出口查询失败时即使设置 FORCE，也需要先取得有效时区才能继续。开发验证见包根 WINDOWS.md，不要为了测试运行安装器。
 - 代理客户端（需支持 TUN 模式），安装器会自动探测并写入 `$PROXY_MODE`:
   - **Clash Verge** —— 存在配置目录即识别，可由「一键修复」按当前模式配置置顶规则
   - **sing-box / ClashX / Surge / WireGuard** —— 按进程或服务识别
@@ -68,7 +70,7 @@ TUN 判定顺序：先看是否存在 `198.18.x.x` 假 IP（Clash 系 fake-ip）
 
 ## 与 macOS 版的差异（注意事项）
 
-> macOS 版支持 Clash Verge / Shadowrocket / sing-box / ClashX / Surge 与地区自适应（按出口国家自动锁定时区+地区格式，换节点后 `set-region` 一键重配）。Windows 版已对齐多客户端检测，但 **Shadowrocket 仅 macOS 可用**；Windows 的时区映射表目前覆盖美国主要时区、加拿大多伦多/温哥华、日本、韩国、新加坡、台湾、香港、英国、德国、法国、澳大利亚（悉尼/墨尔本），其他时区会回退到 `Eastern Standard Time`，可在脚本头部手动修改 `$TZ_TARGET`。`地区` 检查目前仍固定为 `en-US`，不随出口国家调整。换国家后 Windows 版暂无 `set-region`，需要重跑安装器（会重新写入 `$COUNTRY_TARGET` / `$TZ_TARGET`）或手动修改脚本头部。macOS 的 `update` 命令与 12 小时自动检查、48 小时 IP 审查未移植到 Windows；Windows 另有一套启动检查 + 一键更新，见上文「更新」。
+> macOS 版支持 Clash Verge / Shadowrocket / sing-box / ClashX / Surge 与地区自适应（按出口国家自动锁定时区+地区格式，换节点后 `set-region` 一键重配）。Windows 版已对齐多客户端检测，但 **Shadowrocket 仅 macOS 可用**；Windows 安装器使用包内 IANA 映射，并验证本机支持对应 Windows 时区 ID，未知时区会停止安装。`地区` 检查目前仍固定为 `en-US`，不随出口国家调整。换国家后 Windows 版暂无 `set-region`，需要重跑安装器（会重新写入 `$COUNTRY_TARGET` / `$TZ_TARGET`）或手动修改脚本头部。macOS 的 `update` 命令与 12 小时自动检查、48 小时 IP 审查未移植到 Windows；Windows 另有一套启动检查 + 一键更新，见上文「更新」。
 
 | 项目 | 说明 |
 |---|---|

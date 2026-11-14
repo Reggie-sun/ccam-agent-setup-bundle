@@ -2,11 +2,15 @@
 """Local board for ccam. Binds to 127.0.0.1 only."""
 
 import json
+import os
 import queue
 import shutil
+import socket
 import subprocess
+import sys
 import threading
 import time
+import webbrowser
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -15,8 +19,19 @@ from urllib.parse import urlparse
 HOST = "127.0.0.1"
 PORT = 47321
 ROOT = Path(__file__).resolve().parent
-STATE = Path.home() / ".local/state/ccam/usage"
-LOCKS = Path.home() / ".local/state/ccam/locks"
+
+
+def state_paths():
+    """Match ccam/internal/paths, including isolated CCAM_HOME installs."""
+    root = os.environ.get("CCAM_HOME")
+    if root:
+        return Path(root) / "state/usage", Path(root) / "run"
+    xdg = Path(os.environ.get("XDG_STATE_HOME", ""))
+    base = xdg if xdg.is_absolute() else Path.home() / ".local/state"
+    return base / "ccam/usage", base / "ccam/locks"
+
+
+STATE, LOCKS = state_paths()
 ENDPOINT_EVERY = 20
 RENEW_EVERY = 300
 FILE_EVERY = 2
@@ -48,6 +63,7 @@ def run_json(args):
         args,
         capture_output=True,
         text=True,
+        encoding="utf-8",
         timeout=25,
         check=False,
     )
@@ -59,7 +75,7 @@ def run_json(args):
 def read_statusline(name):
     path = STATE / f"{name}.statusline.json"
     try:
-        data = json.loads(path.read_text())
+        data = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
         return None
     measured = parse_time(data.get("at"))
@@ -97,21 +113,55 @@ def overlay(account, line):
     return account
 
 
+def process_start(pid):
+    """Use ccam's platform-specific marker format; never substitute PID existence."""
+    if sys.platform == "win32":
+        import ctypes
+        from ctypes import wintypes
+
+        kernel = ctypes.WinDLL("kernel32", use_last_error=True)
+        kernel.OpenProcess.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
+        kernel.OpenProcess.restype = wintypes.HANDLE
+        kernel.GetExitCodeProcess.argtypes = [wintypes.HANDLE, ctypes.POINTER(wintypes.DWORD)]
+        kernel.GetProcessTimes.argtypes = [wintypes.HANDLE, *([ctypes.POINTER(wintypes.FILETIME)] * 4)]
+        kernel.CloseHandle.argtypes = [wintypes.HANDLE]
+        handle = kernel.OpenProcess(0x1000, False, pid)
+        if not handle:
+            return None
+        try:
+            code = wintypes.DWORD()
+            times = [wintypes.FILETIME() for _ in range(4)]
+            if not kernel.GetExitCodeProcess(handle, ctypes.byref(code)) or code.value != 259:
+                return None
+            if not kernel.GetProcessTimes(handle, *(ctypes.byref(t) for t in times)):
+                return None
+            ticks = (times[0].dwHighDateTime << 32) | times[0].dwLowDateTime
+            return str((ticks - 116444736000000000) * 100)
+        finally:
+            kernel.CloseHandle(handle)
+    if sys.platform.startswith("linux"):
+        return Path(f"/proc/{pid}/stat").read_text().rsplit(")", 1)[1].split()[19]
+    return None
+
+
 def running(name):
-    """ccam 在运行的会话数：locks/profile-<账号>/<pid> 记着进程启动时刻（/proc stat 第 22 列）。"""
+    """Count verified registered sessions; unsupported platforms report unknown."""
+    if sys.platform != "win32" and not sys.platform.startswith("linux"):
+        return None
     count = 0
     for marker in (LOCKS / f"profile-{name}").glob("[0-9]*"):
         try:
-            started = Path(f"/proc/{marker.name}/stat").read_text().rsplit(")", 1)[1].split()[19]
-        except (OSError, IndexError):
+            started = process_start(int(marker.name))
+            expected = marker.read_text(encoding="utf-8").strip()
+        except (OSError, IndexError, ValueError):
             continue
-        count += started == marker.read_text().strip()
+        count += started is not None and started == expected
     return count
 
 
 def next_account():
-    """下一次 claude --yolo 会用的账号：交给 ccam 自己的选号策略（--dry-run 不记录）。"""
-    result = subprocess.run(["ccam", "pick", "--dry-run", "--json"], capture_output=True, text=True, timeout=25, check=False)
+    """Ask ccam's account selection policy without recording a selection."""
+    result = subprocess.run(["ccam", "pick", "--dry-run", "--json"], capture_output=True, text=True, encoding="utf-8", timeout=25, check=False)
     if result.returncode != 0:  # 75：没有账号有余量
         return None, None
     picked = json.loads(result.stdout)
@@ -198,8 +248,28 @@ def refresh_loop():
         time.sleep(FILE_EVERY)
 
 
+def open_account(name):
+    # Always invoke the native binary, never a shortcut script or shell command.
+    executable = shutil.which("ccam.exe" if sys.platform == "win32" else "ccam")
+    if not executable:
+        raise OSError("ccam not found in PATH")
+    args = [executable, "run", name]
+    if sys.platform == "win32":
+        return subprocess.Popen(args, creationflags=subprocess.CREATE_NEW_CONSOLE)
+    if sys.platform.startswith("linux"):
+        return subprocess.Popen(["gnome-terminal", "--", *args], start_new_session=True)
+    raise OSError("Open a terminal and run ccam run <name> on this platform")
+
+
 class Handler(BaseHTTPRequestHandler):
     protocol_version = "HTTP/1.1"
+
+    def handle(self):
+        try:
+            super().handle()
+        except (ConnectionAbortedError, ConnectionResetError, BrokenPipeError):
+            # Windows browsers may abort a persistent socket between requests.
+            self.close_connection = True
 
     def log_message(self, fmt, *args):
         return
@@ -280,10 +350,14 @@ class Handler(BaseHTTPRequestHandler):
         if path != "/api/open":
             self.send_json(404, {"error": "not found"})
             return
-        length = int(self.headers.get("Content-Length") or 0)
         try:
+            length = int(self.headers.get("Content-Length") or 0)
+            if not 0 <= length <= 4096:
+                raise ValueError("invalid length")
             body = json.loads(self.rfile.read(length) or b"{}")
-        except json.JSONDecodeError:
+            if not isinstance(body, dict):
+                raise ValueError("expected object")
+        except (ValueError, UnicodeDecodeError):
             self.send_json(400, {"error": "bad json"})
             return
         name = body.get("name")
@@ -293,23 +367,36 @@ class Handler(BaseHTTPRequestHandler):
         if match is None:
             self.send_json(404, {"error": "unknown account"})
             return
-        shortcut = match.get("shortcut")
-        resolved = shutil.which(shortcut) if shortcut else None
-        args = [resolved or "ccam", *([] if resolved else ["run", name])]
-        subprocess.Popen(
-            ["gnome-terminal", "--", *args],
-            start_new_session=True,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-        )
+        try:
+            open_account(name)
+        except OSError as error:
+            self.send_json(500, {"error": str(error)})
+            return
         self.send_json(200, {"ok": True})
 
 
+class BoardServer(ThreadingHTTPServer):
+    # On Windows SO_REUSEADDR permits two servers to listen on the same port.
+    allow_reuse_address = sys.platform != "win32"
+
+    def server_bind(self):
+        if sys.platform == "win32":
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
+        super().server_bind()
+
+
 def main():
+    server = BoardServer((HOST, PORT), Handler)
     threading.Thread(target=refresh_loop, daemon=True).start()
-    server = ThreadingHTTPServer((HOST, PORT), Handler)
     print(f"http://{HOST}:{PORT}", flush=True)
-    server.serve_forever()
+    if "--open-browser" in sys.argv:
+        webbrowser.open(f"http://{HOST}:{PORT}")
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        pass
+    finally:
+        server.server_close()
 
 
 if __name__ == "__main__":

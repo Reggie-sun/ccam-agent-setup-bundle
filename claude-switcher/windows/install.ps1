@@ -1,6 +1,19 @@
 ﻿# Claude 切换器 Windows 版 - 安装器
 # 右键 -> 使用 PowerShell 以管理员身份运行(或在管理员 PowerShell 里执行)
 $ErrorActionPreference = 'Stop'
+
+function Resolve-InstallTimeZone([string]$IanaId, [string]$MapPath) {
+    $map = [IO.File]::ReadAllText($MapPath) | ConvertFrom-Json
+    $entry = $map.PSObject.Properties | Where-Object { $_.Name -ceq $IanaId } | Select-Object -First 1
+    if (-not $entry) { throw "Unknown IANA timezone: $IanaId. No system settings were changed." }
+    return [TimeZoneInfo]::FindSystemTimeZoneById([string]$entry.Value).Id
+}
+
+$identity = [Security.Principal.WindowsIdentity]::GetCurrent()
+$principal = New-Object Security.Principal.WindowsPrincipal($identity)
+if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+    throw 'Run this installer in an elevated Windows PowerShell window.'
+}
 $BASE = "$env:USERPROFILE\.claude-switcher"
 $CLASH_DIR = @(
     "$env:APPDATA\io.github.clash-verge-rev.clash-verge-rev",
@@ -91,37 +104,27 @@ if ($PROXY_MODE -eq 'clash-verge' -and $CLASH_DIR) {
 }
 
 # ---- 3. IANA 时区 -> Windows 时区ID ----
-$tzMap = @{
-    'America/New_York'    = 'Eastern Standard Time'
-    'America/Chicago'     = 'Central Standard Time'
-    'America/Denver'      = 'Mountain Standard Time'
-    'America/Los_Angeles' = 'Pacific Standard Time'
-    'America/Toronto'     = 'Eastern Standard Time'
-    'America/Vancouver'   = 'Pacific Standard Time'
-    'Asia/Singapore'      = 'Singapore Standard Time'
-    'Asia/Tokyo'          = 'Tokyo Standard Time'
-    'Asia/Seoul'          = 'Korea Standard Time'
-    'Asia/Taipei'         = 'Taipei Standard Time'
-    'Asia/Hong_Kong'      = 'China Standard Time'
-    'Europe/London'       = 'GMT Standard Time'
-    'Europe/Berlin'       = 'W. Europe Standard Time'
-    'Europe/Paris'        = 'Romance Standard Time'
-    'Australia/Sydney'    = 'AUS Eastern Standard Time'
-    'Australia/Melbourne' = 'AUS Eastern Standard Time'
-}
 $tzIana = if ($info -and $info.timezone) { $info.timezone } else { '' }
-$tzId = $tzMap[$tzIana]
-if (-not $tzId) { $tzId = 'Eastern Standard Time' }
+$tzId = Resolve-InstallTimeZone $tzIana (Join-Path $PSScriptRoot 'environment-patch\iana-windows-map.json')
 Write-Host "[OK] 锁定时区: $tzId (按出口IP识别)" -ForegroundColor Green
 
 # ---- 4. 安装文件 ----
 New-Item -ItemType Directory -Force -Path $BASE | Out-Null
+$backup = Join-Path $BASE ('backup-install-' + [Guid]::NewGuid().ToString('N'))
+foreach ($file in @('claude-switch.ps1', 'SwitcherUI.ps1', 'claude-bodyguard.ps1', 'proxy-mode.txt', 'version.txt')) {
+    $existing = Join-Path $BASE $file
+    if (Test-Path -LiteralPath $existing) {
+        New-Item -ItemType Directory -Force -Path $backup | Out-Null
+        Copy-Item -LiteralPath $existing -Destination (Join-Path $backup $file) -ErrorAction Stop
+    }
+}
+if (Test-Path -LiteralPath $backup) { Write-Host "Backup: $backup" }
 Copy-Item "$PSScriptRoot\claude-switch.ps1"   "$BASE\claude-switch.ps1" -Force
 Copy-Item "$PSScriptRoot\SwitcherUI.ps1"      "$BASE\SwitcherUI.ps1" -Force
 Copy-Item "$PSScriptRoot\claude-bodyguard.ps1" "$BASE\claude-bodyguard.ps1" -Force
 
 # 写入探测到的客户端模式/代理组名/国家/时区(替换串里的 $ 用 $$ 转义,避免被当作捕获组)
-$core = Get-Content "$BASE\claude-switch.ps1" -Raw
+$core = Get-Content "$BASE\claude-switch.ps1" -Raw -Encoding UTF8
 $modeEsc = $PROXY_MODE.Replace('$', '$$')
 $countryEsc = $country.Replace('$', '$$')
 $tzEsc = $tzId.Replace('$', '$$')
@@ -133,6 +136,10 @@ $core = $core -replace '\$PROXY_GROUP = "[^"]*"', ('$$PROXY_GROUP = "' + $grpEsc
 # 强制写回 UTF-8 BOM:计划任务用 powershell.exe 5.1 读取,无 BOM 会把中文读成乱码
 $utf8Bom = New-Object System.Text.UTF8Encoding -ArgumentList $true
 [System.IO.File]::WriteAllText("$BASE\claude-switch.ps1", $core, $utf8Bom)
+foreach ($file in @('SwitcherUI.ps1', 'claude-bodyguard.ps1')) {
+    $path = Join-Path $BASE $file
+    [IO.File]::WriteAllText($path, [IO.File]::ReadAllText($path), $utf8Bom)
+}
 $PROXY_MODE | Out-File -Encoding ascii -NoNewline "$BASE\proxy-mode.txt"
 
 # 版本号由 release 打包时写入 zip 根的 VERSION;开发目录没有该文件则记为 unknown
@@ -149,9 +156,11 @@ Write-Host "[OK] 核心文件已安装到 $BASE (代理模式: $PROXY_MODE)" -Fo
 
 # ---- 5. 桌面快捷方式 ----
 $ws = New-Object -ComObject WScript.Shell
-$sc = $ws.CreateShortcut("$env:USERPROFILE\Desktop\Claude切换器.lnk")
+$desktop = [Environment]::GetFolderPath('DesktopDirectory')
+if (-not $desktop) { throw 'Windows desktop folder could not be resolved.' }
+$sc = $ws.CreateShortcut((Join-Path $desktop 'Claude切换器.lnk'))
 $sc.TargetPath = "powershell.exe"
-$sc.Arguments = "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$BASE\SwitcherUI.ps1`""
+$sc.Arguments = "-NoProfile -STA -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$BASE\SwitcherUI.ps1`""
 $sc.WorkingDirectory = $BASE
 $sc.Save()
 Write-Host "[OK] 桌面快捷方式已创建" -ForegroundColor Green
@@ -172,8 +181,9 @@ Write-Host "[OK] 时区已锁定 / IPv6 已关闭 / DNS 缓存已刷新" -Foregr
 
 # ---- 8. 注册保镖计划任务 ----
 $action  = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$BASE\claude-bodyguard.ps1`""
-$trigger = New-ScheduledTaskTrigger -AtLogOn
-Register-ScheduledTask -TaskName 'ClaudeBodyguard' -Action $action -Trigger $trigger -Force | Out-Null
+$trigger = New-ScheduledTaskTrigger -AtLogOn -User $identity.Name
+$taskPrincipal = New-ScheduledTaskPrincipal -UserId $identity.Name -LogonType Interactive -RunLevel Limited
+Register-ScheduledTask -TaskName 'ClaudeBodyguard' -Action $action -Trigger $trigger -Principal $taskPrincipal -Force | Out-Null
 Stop-ScheduledTask -TaskName 'ClaudeBodyguard' -ErrorAction SilentlyContinue
 Start-ScheduledTask -TaskName 'ClaudeBodyguard'
 Write-Host "[OK] 保镖已注册并启动(计划任务,登录自动运行)" -ForegroundColor Green
