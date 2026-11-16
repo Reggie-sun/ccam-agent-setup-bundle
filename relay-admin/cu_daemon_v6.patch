@@ -1,0 +1,118 @@
+--- a/claude_unlimited/daemon.py
++++ b/claude_unlimited/daemon.py
+@@ -22,4 +22,5 @@
+ from __future__ import annotations
+ 
++import http.client
+ import json
+ import os
+@@ -503,4 +504,26 @@
+ 
+ 
++_FAILURE_LOG_MAX_BYTES = 2_000_000
++_failure_log_lock = threading.Lock()
++
++
++def _log_request_failure(kind: str, **fields) -> None:
++    """Append one line about a proxied request that did not end in success:
++    when, what kind, status/error code, which account (id prefix), streaming or
++    not. Never request or response content, never credentials. Diagnostics
++    only: any problem writing it is ignored so it can never affect a request."""
++    try:
++        line = json.dumps({"ts": datetime.now(timezone.utc).isoformat(timespec="seconds"), "kind": kind, **fields},
++                          ensure_ascii=False, default=str)
++        path = APP_DIR / "request_failures.jsonl"
++        with _failure_log_lock:
++            if path.exists() and path.stat().st_size > _FAILURE_LOG_MAX_BYTES:
++                path.replace(path.with_suffix(".jsonl.1"))
++            with open(path, "a", encoding="utf-8") as f:
++                f.write(line + "\n")
++    except Exception:  # noqa: BLE001 - diagnostics must never break serving
++        pass
++
++
+ def _proxy_error_payload(result) -> tuple:
+     """(status, Anthropic error envelope) for a request the gateway refused."""
+@@ -733,7 +756,11 @@
+             on_account = _gateway.agents_on_account_seconds()
+             last_use = usage_history.latest_by_profile()
++            # Epoch seconds of the last usage reading (proxied response or
++            # background probe), so a page can say how old the quota numbers are.
++            observed_at = _gateway.usage_observed_at()
+             now_utc = datetime.now(timezone.utc)
+             for item in items:
+                 item["live_agents"] = live_agents.get(item["id"], 0)
++                item["usage_observed_at"] = observed_at.get(item["id"])
+                 # The widget's "serving now" block. last_* is the latest
+                 # COMPLETED request (usage is recorded once known), so it is
+@@ -1477,4 +1504,6 @@
+         if grant.forced_profile_id is not None or grant.distribute:
+             return (grant,)
++        _log_request_failure("refused", status=401, error="invalid_local_credential",
++                             client=(self.headers.get("User-Agent") or "")[:60])
+         self._send_json(401, {"type": "error", "error": {"type": "authentication_error",
+                                                            "message": "[claude-unlimited] invalid local credential"}})
+@@ -1510,10 +1539,25 @@
+         inbound_headers = {k: v for k, v in self.headers.items()}
+ 
++        stream = _wants_event_stream(method, path, body)
++        client = (self.headers.get("User-Agent") or "")[:60]
++
+         def serve():
+-            return _gateway.handle(method, path, inbound_headers, body,
+-                                   forced_profile_id=grant.forced_profile_id,
+-                                   distribute=grant.distribute)
+-
+-        if _wants_event_stream(method, path, body):
++            started = time.monotonic()
++            try:
++                result = _gateway.handle(method, path, inbound_headers, body,
++                                         forced_profile_id=grant.forced_profile_id,
++                                         distribute=grant.distribute)
++            except BaseException as exc:  # noqa: BLE001 - logged, then re-raised unchanged
++                _log_request_failure("exception", error=type(exc).__name__, path=path, stream=stream, client=client,
++                                     seconds=round(time.monotonic() - started, 1))
++                raise
++            if result.error is not None or (result.status or 0) >= 400:
++                _log_request_failure("refused" if result.error is not None else "upstream_status",
++                                     status=result.status, error=result.error, path=path, stream=stream, client=client,
++                                     profile=(result.profile_id or "")[:8] or None,
++                                     seconds=round(time.monotonic() - started, 1))
++            return result
++
++        if stream:
+             self._serve_with_keepalive(serve)
+             return
+@@ -1579,5 +1623,12 @@
+                 self.wfile.write(chunk)
+         except (BrokenPipeError, ConnectionResetError):
+-            pass  # client disconnected mid-stream
++            # client disconnected mid-stream
++            _log_request_failure("client_disconnected", phase="body", status=result.status, profile=(result.profile_id or "")[:8] or None)
++        except (OSError, http.client.HTTPException) as exc:
++            # upstream stream broke after headers went out
++            _log_request_failure("stream_error", phase="body", error=type(exc).__name__,
++                                 errno=getattr(exc, "errno", None), status=result.status,
++                                 profile=(result.profile_id or "")[:8] or None)
++            raise
+ 
+     def _serve_with_keepalive(self, serve) -> None:
+@@ -1627,4 +1678,5 @@
+                 self.wfile.flush()
+         except (BrokenPipeError, ConnectionResetError):
++            _log_request_failure("client_disconnected", phase="keepalive_ping")
+             # The client left. Let the upstream call finish, then release it:
+             # an unread body must still be closed, or its in-flight slot and
+@@ -1649,5 +1701,12 @@
+                 self.wfile.write(chunk)
+         except (BrokenPipeError, ConnectionResetError):
++            _log_request_failure("client_disconnected", phase="keepalive_body", status=result.status,
++                                 profile=(result.profile_id or "")[:8] or None)
+             _discard_result(result)
++        except (OSError, http.client.HTTPException) as exc:
++            _log_request_failure("stream_error", phase="keepalive_body", error=type(exc).__name__,
++                                 errno=getattr(exc, "errno", None), status=result.status,
++                                 profile=(result.profile_id or "")[:8] or None)
++            raise
+ 
+     def _write_sse(self, event: bytes, payload: dict) -> None:

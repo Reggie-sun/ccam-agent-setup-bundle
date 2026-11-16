@@ -19,6 +19,9 @@ from urllib.request import Request, urlopen
 from urllib.parse import urlsplit
 
 ROOT = Path(__file__).resolve().parent
+# Optional email -> local ccam alias (work, work2, ...) for display only; generated
+# on the admin's machine by make-aliases.py. Re-read per request so updates need no restart.
+ALIAS_FILE = Path(os.environ.get('ALIAS_FILE', str(ROOT / 'aliases.json')))
 FONT_FILES = { '/fonts/' + name: ROOT / 'fonts' / name for name in
                ('Barlow-Regular.ttf', 'BarlowCondensed-SemiBold.ttf') }
 ORIGIN = os.environ.get('ADMIN_ORIGIN', 'https://relay-admin.example.com')
@@ -37,8 +40,20 @@ AUTH_CACHE_MAX = 4
 AUTH_CACHE_KEY = secrets.token_bytes(32)  # per-process; AUTH is only loaded at start, so a password change (restart) clears the cache
 PROFILE_WRITE_LOCK = threading.Lock()
 INTERNAL_OWNER = secrets.token_hex(32)
+def load_aliases():
+    try:
+        data = json.loads(ALIAS_FILE.read_text())
+    except (OSError, ValueError):
+        return {}
+    if not isinstance(data, dict):
+        return {}
+    return {email.lower(): alias for email, alias in data.items()
+            if isinstance(email, str) and isinstance(alias, str) and re.fullmatch(r'[A-Za-z0-9_.-]{1,32}', alias)}
+
+
 FIELDS = ('id', 'name', 'enabled', 'priority', 'state', 'usage_5h_percent',
-          'usage_7d_percent', 'usage_5h_resets_at', 'usage_7d_resets_at', 'last_used_at')
+          'usage_7d_percent', 'usage_5h_resets_at', 'usage_7d_resets_at', 'last_used_at',
+          'usage_observed_at')
 
 
 def upstream(path, method='GET', data=None, csrf=None):
@@ -238,19 +253,38 @@ class Handler(BaseHTTPRequestHandler):
                         auth = health['profiles']
                 except (OSError, http.client.HTTPException, ValueError):
                     pass
+                distribute = None
+                try:
+                    value = upstream('/api/settings').get('settings', {}).get('distribute_sessions_default')
+                    distribute = value if type(value) is bool else None
+                except (OSError, http.client.HTTPException, ValueError, AttributeError):
+                    pass
+                current = None
+                try:
+                    # cu's rotation pointer: where new requests go next. Missing stays unknown.
+                    pointer = upstream('/api/status').get('current_profile_id')
+                    if isinstance(pointer, str) and re.fullmatch(r'[a-f0-9]{16,64}', pointer):
+                        current = pointer
+                except (OSError, http.client.HTTPException, ValueError, AttributeError):
+                    pass
                 items = []
+                aliases = load_aliases()
                 for item in profiles:
                     public = {key: item.get(key) for key in FIELDS}
+                    if 'usage_observed_at' not in item:
+                        # cu without the quota-age patch: omit it so the page hides the age instead of showing "unknown".
+                        del public['usage_observed_at']
                     warning = warnings.get(item.get('id'), {})
                     public['probe_status'] = warning.get('probe_status', 'unknown')
                     public['next_probe_at'] = warning.get('next_probe_at')
                     observation = auth.get(item.get('id'), {})
                     public['auth_status'] = observation.get('auth_status', 'pending')
+                    public['alias'] = aliases.get(str(item.get('name', '')).lower())
                     for key in ('auth_checked_at', 'auth_last_success_at', 'auth_next_check_at'):
                         public[key] = observation.get(key)
                     items.append(public)
-                self.send(200, {'profiles': items, 'csrf_token': CSRF})
-            except (HTTPError, URLError, TimeoutError, ValueError, KeyError):
+                self.send(200, {'profiles': items, 'current_profile_id': current, 'distribute': distribute, 'csrf_token': CSRF})
+            except (OSError, http.client.HTTPException, ValueError, KeyError):
                 self.send(502, {'error': 'account_service_unavailable'})
         elif self.path == '/api/logins/current' or re.fullmatch(r'/api/logins/[a-f0-9]{64}', self.path):
             self.forward_login('GET')
@@ -267,7 +301,8 @@ class Handler(BaseHTTPRequestHandler):
         if self.headers.get('Origin') != ORIGIN or not hmac.compare_digest(self.headers.get('X-CSRF-Token', '').encode(), CSRF.encode()):
             self.send(403, {'error': 'invalid_origin_or_csrf'})
             return
-        if not re.fullmatch(r'/api/profiles/[a-f0-9]{16,64}', self.path):
+        mode_change = self.path == '/api/settings/distribute'
+        if not mode_change and not re.fullmatch(r'/api/profiles/[a-f0-9]{16,64}', self.path):
             self.send(404, {'error': 'not_found'})
             return
         try:
@@ -280,6 +315,8 @@ class Handler(BaseHTTPRequestHandler):
             if 'enabled' in data:
                 if type(data['enabled']) is not bool:
                     raise ValueError()
+            elif mode_change:
+                raise ValueError()
             elif 'priority' in data:
                 if type(data['priority']) is not int or not 1 <= data['priority'] <= 999:
                     raise ValueError()
@@ -300,12 +337,16 @@ class Handler(BaseHTTPRequestHandler):
             return
         try:
             token = upstream('/api/status')['csrf_token']
-            upstream(self.path, 'PATCH', data, token)
+            if mode_change:
+                # The only cu setting this page may change: per-session spreading.
+                upstream('/api/settings', 'PATCH', {'distribute_sessions_default': data['enabled']}, token)
+            else:
+                upstream(self.path, 'PATCH', data, token)
             self.send(200, {'ok': True})
         except HTTPError as error:
             status = error.code if error.code in (400, 404, 429) else 502
             self.send(status, {'error': 'account_update_failed'})
-        except (URLError, TimeoutError, ValueError, KeyError):
+        except (OSError, http.client.HTTPException, ValueError, KeyError):
             self.send(502, {'error': 'account_service_unavailable'})
 
 

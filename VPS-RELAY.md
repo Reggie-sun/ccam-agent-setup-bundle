@@ -1,6 +1,6 @@
 # VPS Relay and Account Administration
 
-v5 保留原有 Windows/Linux CCAM、看板、检查工具、网页 OAuth broker 与许可证，新增 VPS 后台自动登录检测、按需续期及本机默认连接 VPS 的配置工具。先阅读本文件，再使用原有 START-HERE.md / WINDOWS.md 安装本机工具。
+v6 在 v5 基础上更新管理页，并附带可选 cu 补丁，见下文「v6 Admin Page Update」与「Optional cu Patch (v6)」。v5 保留原有 Windows/Linux CCAM、看板、检查工具、网页 OAuth broker 与许可证，新增 VPS 后台自动登录检测、按需续期及本机默认连接 VPS 的配置工具。先阅读本文件，再使用原有 START-HERE.md / WINDOWS.md 安装本机工具。
 
 新增 `relay-admin/` 源码、模板及本文档沿用包根目录 `LICENSE` 的 MIT 许可证；原有第三方文件保留各自许可证。cu 与官方 Claude CLI 并未包含在本包内，适用其各自许可与服务条件。
 
@@ -131,6 +131,56 @@ sudo /opt/claude-relay/venv/bin/python relay-admin/install_auth_monitor.py
 确认没有活动请求、正在进行或结果未知的登录流程后，由管理员在维护窗口重启 `claude-relay-cu.service`。若原服务依赖导致 broker 停止，确认并启动 `relay-login.service`；按你的代理配置确认管理入口服务正常。不要在请求处理中无条件重启。检查 `~claude-relay/.claude-unlimited/auth_monitor_state.json` 的时间戳自动推进及管理页状态；它仅含账号 ID、状态和时间戳，权限为 0600。真实供应商验证结果不能由单元测试替代。
 
 升级 cu 后应重新核对接口和安装器兼容性，不能假设补丁会保留。回滚时在无活动请求/登录的维护窗口恢复安装器打印的备份目录中的 `daemon.py`，若备份包含旧 `auth_monitor.py` 也恢复，然后重启 cu 与相关管理服务；原模块不存在时可保留新模块文件但旧 daemon 不再调用它。保留状态与所有原始备份，不删除账号或密钥环。
+
+## v6 Admin Page Update
+
+升级只需替换 `server.py`、`index.html`（可选 `aliases.json`），然后 `sudo systemctl restart relay-admin.service`；不需要重启 cu，也不影响中转请求。先备份 `/opt/relay-admin` 里的旧文件，保留自己 service 里的 `ADMIN_ORIGIN`。
+
+```sh
+sudo install -m 0644 relay-admin/server.py relay-admin/index.html /opt/relay-admin/
+sudo systemctl restart relay-admin.service
+```
+
+- **未开始计时**：5 小时窗口还没有用量时，重置时间显示「未开始计时」。
+- **额度更新时间**：每行显示「额度…前更新」，超过 15 分钟标黄。时间来自 cu 的 `GET /api/profiles` 字段 `usage_observed_at`，只有装了下文 cu 补丁才有；未打补丁时该行不显示，不会报警。打了补丁但 cu 刚重启、还没读到额度时显示灰色「额度尚未重新读取」。
+- **排序与轮换指针**：列表按优先级数字升序；读取 cu `GET /api/status` 的 `current_profile_id`，在对应行标「轮换指针」。它是 cu 的粘性指针，不代表所有流量都走这个账号。
+- **分散使用 / 用完再切**：页面右上角开关，经 `PATCH /api/settings/distribute` 只修改 cu 的 `distribute_sessions_default` 一项，复用管理页的登录、Origin、CSRF 校验；登录流程进行中不允许切换。cu 每个请求读取该设置，无需重启。读取失败时显示未知。
+
+### Local Aliases (optional)
+
+管理页可以在每个邮箱上方显示本机 ccam 账号名（main、work、work2…），仅用于辨认，不影响 VPS 调度。在**装有 ccam 的本机**运行：
+
+```sh
+python3 relay-admin/make-aliases.py
+```
+
+它读取 `~/.claude.json`（记为 main）和 `~/.local/share/ccam/profiles/*/.claude.json` 里的登录邮箱，在脚本旁生成 `aliases.json`（只有「邮箱→别名」，不含 token 或密码）。把它上传到 VPS 的 `/opt/relay-admin/aliases.json`（root 所有、0644）。`server.py` 每次请求重新读取，改了无需重启；文件缺失或格式不对时只是不显示别名。`aliases.json` 含你的账号邮箱，包根目录 `.gitignore` 已排除 `relay-admin/aliases.json`，仍不要提交到公开仓库或发给他人；本机某个 ccam 账号换了邮箱后重新生成并上传。
+
+## Optional cu Patch (v6)
+
+`relay-admin/install_cu_patch.py` 给 cu 1.4.0 的 `daemon.py` 打两处补丁，内容见同目录 `cu_daemon_v6.patch`：
+
+1. `GET /api/profiles` 每个账号增加只读字段 `usage_observed_at`（cu 内存里最后一次读到该账号额度的时间，来自中转响应或后台查询），供管理页显示额度更新时间。不新增任何对供应商的请求。
+2. 失败请求日志：中转请求被拒绝、上游返回 4xx/5xx、处理异常、流式中途断开时，向 cu 数据目录追加一行 `request_failures.jsonl`（服务用户下通常为 `~claude-relay/.claude-unlimited/`）。每行是一条 JSON，只含这些诊断字段：`ts`（UTC 时间）、`kind`（refused / upstream_status / exception / client_disconnected / stream_error）、`status`、`error`（错误码或异常类名）、`errno`、`phase`（流式断开发生的阶段）、`path`（请求路径）、`stream`、`client`（User-Agent 前 60 字符）、`profile`（账号 ID 前 8 位）、`seconds`（耗时）；每行只出现其中适用的字段。不记录请求或响应内容，不记录凭据。超过约 2 MB 时改名为 `.jsonl.1` 再重新开始（只保留一份旧文件）。写日志出错会被忽略，不影响请求。
+
+安装器只接受两种精确的 `daemon.py`（按 SHA256 核对）：原版 cu 1.4.0，以及装过 v5 `install_auth_monitor.py` 之后的版本。其他任何文件（包括版本号相同但内容不同）都拒绝且不做修改。打补丁后还会核对结果的 SHA256 与审查过的结果一致，否则不写入。若要同时使用 v5 自动登录检测，请先运行 `install_auth_monitor.py`，再运行本补丁；顺序反过来时 auth monitor 安装器会拒绝且不做修改。已经先打了本补丁又想装 auth monitor：先用下文 `--rollback` 恢复原版 daemon.py，再运行 `install_auth_monitor.py`，最后重新运行 `install_cu_patch.py`（三步都不重启服务，全部完成后在维护窗口重启一次 cu）。
+
+```sh
+# 必须使用你现有 cu 的解释器；路径按真实部署调整：
+sudo /opt/claude-relay/venv/bin/python relay-admin/install_cu_patch.py
+# 模拟测试（合成文件，不碰真实 cu、不联网）：
+/opt/claude-relay/venv/bin/python -m unittest discover -s relay-admin -p 'test_*.py'
+```
+
+安装器打印备份目录（`cu-patch-backup-…`，在 `claude_unlimited` 包目录下），**不会重启任何服务**。写入方式是在同一目录写临时文件、fsync、保留原文件权限和属主后整体替换，不会留下写了一半的 daemon.py；无法保留属主（例如没用 sudo）时直接拒绝、原文件不变。已经打过补丁时再次运行只提示已安装。确认没有活动请求、没有进行中或结果未知的登录流程后，由管理员在维护窗口重启 `claude-relay-cu.service`；若 broker 或隧道服务依赖 cu 一起停止，确认后重新启动它们。重启后管理页需要等 cu 下次读到额度才会显示时间。
+
+回滚（同样不重启服务，之后按上面的方式在维护窗口重启 cu）：
+
+```sh
+sudo /opt/claude-relay/venv/bin/python relay-admin/install_cu_patch.py --rollback /path/to/cu-patch-backup-YYYYMMDDTHHMMSSffffffZ
+```
+
+只有当前 `daemon.py` 仍是该备份打补丁后的原样时才恢复，否则拒绝并要求人工核对。`request_failures.jsonl` 回滚后保留，可自行删除。升级 cu 后补丁不会保留，需要重新核对兼容性。
 
 ## Default Client Routing
 

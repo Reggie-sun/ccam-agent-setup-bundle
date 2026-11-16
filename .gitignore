@@ -5,3 +5,5 @@ __pycache__/
 coverage.out
 .coverage
 INSTALLATION-REPORT.md
+# admin-page aliases contain account emails (relay-admin/make-aliases.py output)
+relay-admin/aliases.json

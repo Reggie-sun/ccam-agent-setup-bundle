@@ -1,4 +1,8 @@
-# VPS Update — v5
+# VPS Update — v6
+
+v6 更新管理页：未开始计时、每行额度更新时间、按优先级排序并标出轮换指针、本机 ccam 别名、「分散使用 / 用完再切」开关；另附可选的 cu 1.4.0 补丁（额度更新时间与失败请求日志）。cu 不打补丁时管理页其余功能照常，只是不显示额度更新时间。详见 [VPS-RELAY.md](VPS-RELAY.md) 的 v6 章节。
+
+## v5
 
 新增后台自动登录检测与按需续期、邮箱账号管理，以及本机 Claude 默认连接 VPS 的配置工具。先读 [VPS-RELAY.md](VPS-RELAY.md) 和 [client/DEFAULT-VPS.md](client/DEFAULT-VPS.md)。旧 Windows/Linux 本机工具与数据迁移说明保留如下；VPS 与本机账号状态独立。
 
