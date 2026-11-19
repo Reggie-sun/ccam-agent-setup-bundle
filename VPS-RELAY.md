@@ -158,12 +158,14 @@ python3 relay-admin/make-aliases.py
 
 ## Optional cu Patch (v6)
 
-`relay-admin/install_cu_patch.py` 给 cu 1.4.0 的 `daemon.py` 打两处补丁，内容见同目录 `cu_daemon_v6.patch`：
+`relay-admin/install_cu_patch.py` 给 cu 1.4.0 的 `daemon.py` 安装同目录下的 `cu_daemon_v6.patch`、`cu_quota_reset.patch` 和 `cu_stream_end.patch`：
 
 1. `GET /api/profiles` 每个账号增加只读字段 `usage_observed_at`（cu 内存里最后一次读到该账号额度的时间，来自中转响应或后台查询），供管理页显示额度更新时间。不新增任何对供应商的请求。
 2. 失败请求日志：中转请求被拒绝、上游返回 4xx/5xx、处理异常、流式中途断开时，向 cu 数据目录追加一行 `request_failures.jsonl`（服务用户下通常为 `~claude-relay/.claude-unlimited/`）。每行是一条 JSON，只含这些诊断字段：`ts`（UTC 时间）、`kind`（refused / upstream_status / exception / client_disconnected / stream_error）、`status`、`error`（错误码或异常类名）、`errno`、`phase`（流式断开发生的阶段）、`path`（请求路径）、`stream`、`client`（User-Agent 前 60 字符）、`profile`（账号 ID 前 8 位）、`seconds`（耗时）；每行只出现其中适用的字段。不记录请求或响应内容，不记录凭据。超过约 2 MB 时改名为 `.jsonl.1` 再重新开始（只保留一份旧文件）。写日志出错会被忽略，不影响请求。
+3. 开启额度后台查询时，5 小时或每周窗口到点后，下一轮优先查询上次读取早于重置点的账号。已耗尽或达到切换阈值的账号距上次读取满 60 秒也可优先查询，以发现提前恢复的额度。仍遵循账号与供应商退避、每轮最多两个账号的限制；页面按实际读数更新。
+4. 流式请求结束时，cu 在同一目录的 `stream_end.jsonl` 记录请求 ID、是否收到并写出完整的 `message_stop` 帧，以及上游提前结束、读取异常或下游写入失败等结果。可用客户端请求 ID 对照排查。写入成功表示 VPS 已向下游连接写出该帧；确认客户端收到仍需客户端记录。该日志同样按约 2 MB 轮换。
 
-安装器只接受两种精确的 `daemon.py`（按 SHA256 核对）：原版 cu 1.4.0，以及装过 v5 `install_auth_monitor.py` 之后的版本。其他任何文件（包括版本号相同但内容不同）都拒绝且不做修改。打补丁后还会核对结果的 SHA256 与审查过的结果一致，否则不写入。若要同时使用 v5 自动登录检测，请先运行 `install_auth_monitor.py`，再运行本补丁；顺序反过来时 auth monitor 安装器会拒绝且不做修改。已经先打了本补丁又想装 auth monitor：先用下文 `--rollback` 恢复原版 daemon.py，再运行 `install_auth_monitor.py`，最后重新运行 `install_cu_patch.py`（三步都不重启服务，全部完成后在维护窗口重启一次 cu）。
+安装器按 SHA256 核对原版 cu 1.4.0、装过 v5 `install_auth_monitor.py` 的版本，以及这两种版本安装过旧 v6 补丁或额度优先查询补丁的文件。其他任何文件（包括版本号相同但内容不同）都拒绝且不做修改。打补丁后还会核对结果的 SHA256 与审查过的结果一致，否则不写入。若要同时使用 v5 自动登录检测，请先运行 `install_auth_monitor.py`，再运行本补丁；顺序反过来时 auth monitor 安装器会拒绝且不做修改。已经先打了本补丁又想装 auth monitor：先用下文 `--rollback` 恢复原版 daemon.py，再运行 `install_auth_monitor.py`，最后重新运行 `install_cu_patch.py`（三步都不重启服务，全部完成后在维护窗口重启一次 cu）。
 
 ```sh
 # 必须使用你现有 cu 的解释器；路径按真实部署调整：

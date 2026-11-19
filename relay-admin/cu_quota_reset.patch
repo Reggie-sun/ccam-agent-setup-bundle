@@ -1,0 +1,36 @@
+--- a/daemon.py
++++ b/daemon.py
+@@ -2158,6 +2158,7 @@
+     # pause and the per-Profile backoff still apply exactly as before. No new
+     # polling loop (invariant 2); this rides the tick that already runs.
+     forced = _gateway.take_usage_recheck_requests()
++    now = time.time()
+     candidates = []
+     for profile in pool.profiles:
+         provider = usage_probe.provider_for(profile)
+@@ -2168,9 +2169,20 @@
+         # would only fail, and failing reads are exactly the noise to avoid.
+         if rt is not None and rt.state.value in ("auth_invalid", "disabled"):
+             continue
+-        observed_at = None if profile.id in forced else observed.get(profile.id)
+-        candidates.append(usage_probe.Candidate(profile.id, provider, observed_at))
+-    return candidates
++        observed_at = observed.get(profile.id)
++        priority = profile.id in forced or observed_at is None
++        if rt is not None and observed_at is not None:
++            reset_due = any(reset is not None and observed_at < reset.timestamp() <= now
++                            for reset in (rt.resets_at, rt.resets_at_7d))
++            recovery_due = rt.state.value in ("exhausted", "draining") and now - observed_at >= 60
++            priority = priority or reset_due or recovery_due
++        # The scheduler treats None as due now, but still applies backoff and
++        # its batch cap. Oldest readings first when multiple accounts qualify.
++        candidate = usage_probe.Candidate(profile.id, provider, None if priority else observed_at)
++        candidates.append((observed_at if observed_at is not None else -1, candidate))
++
++    candidates.sort(key=lambda row: row[0])
++    return [candidate for _, candidate in candidates]
+-
++
+-
++
+ def _probe_usage(profile) -> None:

@@ -125,6 +125,19 @@ class SecurityTests(unittest.TestCase):
             self.assertIsNone(data['profiles'][0]['usage_5h_percent'])
             self.assertEqual(data['profiles'][0]['usage_observed_at'], 1794700000.5)
 
+    def test_weekly_primary_window_is_only_shown_in_weekly_column(self):
+        five = '2026-11-19T12:00:00+00:00'
+        week = '2026-11-23T12:00:00+00:00'
+        rows = [{'id': 'a'*16, 'usage_window_label': 'weekly', 'usage_5h_percent': 0, 'usage_5h_resets_at': week},
+                {'id': 'b'*16, 'usage_5h_percent': 17, 'usage_5h_resets_at': five,
+                 'usage_7d_percent': 89, 'usage_7d_resets_at': week}]
+        with patch.object(self.module, 'upstream', return_value={'profiles': rows}):
+            status, data = self.request()
+        self.assertEqual(status, 200)
+        values = [(p['usage_5h_percent'], p['usage_5h_resets_at'], p['usage_7d_percent'], p['usage_7d_resets_at'])
+                  for p in data['profiles']]
+        self.assertEqual(values, [(None, None, 0, week), (17, five, 89, week)])
+
     def test_unpatched_cu_omits_quota_age_but_patched_null_is_kept(self):
         rows = [{'id': 'a'*16, 'name': 'x'}, {'id': 'b'*16, 'name': 'y', 'usage_observed_at': None}]
         with patch.object(self.module, 'upstream', return_value={'profiles': rows}):

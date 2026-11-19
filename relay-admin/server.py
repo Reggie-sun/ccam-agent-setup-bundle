@@ -283,6 +283,12 @@ class Handler(BaseHTTPRequestHandler):
                 aliases = load_aliases()
                 for item in profiles:
                     public = {key: item.get(key) for key in FIELDS}
+                    if item.get('usage_window_label') == 'weekly':
+                        # cu stores a weekly-only allowance in its primary slot.
+                        public['usage_7d_percent'] = public['usage_5h_percent']
+                        public['usage_7d_resets_at'] = public['usage_5h_resets_at']
+                        public['usage_5h_percent'] = None
+                        public['usage_5h_resets_at'] = None
                     if 'usage_observed_at' not in item:
                         # cu without the quota-age patch: omit it so the page hides the age instead of showing "unknown".
                         del public['usage_observed_at']

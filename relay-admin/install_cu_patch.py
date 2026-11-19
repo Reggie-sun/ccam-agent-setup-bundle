@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
-"""Apply the reviewed v6 cu daemon patch (usage_observed_at + failed-request log) to an exact cu 1.4.0 daemon.py.
+"""Apply the reviewed cu diagnostics and quota-reset patches to cu 1.4.0.
 
-Only two exact daemon.py builds are accepted: the original cu 1.4.0 file and the same file after
-install_auth_monitor.py. Anything else is refused unchanged. Never restarts services.
+Accepts cu 1.4.0 with or without install_auth_monitor.py and their reviewed v6 upgrades. Never restarts services.
 Rollback: --rollback BACKUP_DIR restores the saved daemon.py if the patched file is still untouched.
 """
 import argparse
@@ -22,6 +21,17 @@ SOURCES = {
     '732993aa2436cfc8823be431399f249969c35b07acb8b47055d925b0d9d7b66d': 'db9193ed70c96831d065da5fe4796d16c11c7c798a31022f029902b45c54b0d2',  # cu 1.4.0 + v5 auth monitor
 }
 PATCH_FILE = Path(__file__).with_name('cu_daemon_v6.patch')
+RESET_PATCH_FILE = Path(__file__).with_name('cu_quota_reset.patch')
+RESET_SOURCES = {
+    '09f1de61fe8b054a5c22804c13682494ea259091f899e2de4c55693f477b71cf': 'd2aa15262e3c569194776c254ae43fa42e1d42c53025cbd2f0989e1d51bfca28',
+    'db9193ed70c96831d065da5fe4796d16c11c7c798a31022f029902b45c54b0d2': 'ceb2a646f6763a4d050516c7f3565b09ca3c0042c53831b172d6a28a6f532055',
+}
+
+STREAM_PATCH_FILE = Path(__file__).with_name('cu_stream_end.patch')
+STREAM_SOURCES = {
+    'd2aa15262e3c569194776c254ae43fa42e1d42c53025cbd2f0989e1d51bfca28': 'f2e13393e96ede31d22e5a632345f180ec38215153f6421782b1a12deee89ade',
+    'ceb2a646f6763a4d050516c7f3565b09ca3c0042c53831b172d6a28a6f532055': 'dcc975f72c8ce83ac8820eb3829e58a4ba34baf80885e10842fca7fadb35cbe8',
+}
 
 
 def sha256(data):
@@ -40,14 +50,14 @@ def apply_hunks(text, diff):
     return text
 
 
-def patch_daemon(data, diff):
+def patch_daemon(data, diff, sources):
     digest = sha256(data)
-    if digest in SOURCES.values():
+    if digest in sources.values():
         return data
-    if digest not in SOURCES:
+    if digest not in sources:
         raise ValueError('Unsupported or modified cu daemon; inspect this build instead of forcing a patch')
     patched = apply_hunks(data.decode(), diff).encode()
-    if sha256(patched) != SOURCES[digest]:
+    if sha256(patched) != sources[digest]:
         raise ValueError('Patched daemon does not match the reviewed result; nothing was changed')
     compile(patched, 'daemon.py', 'exec')
     return patched
@@ -73,7 +83,13 @@ def replace_atomically(path, data):
 def install(package, patch_file=PATCH_FILE):
     daemon = package / 'daemon.py'
     before = daemon.read_bytes()
-    after = patch_daemon(before, patch_file.read_text())
+    after = before
+    for sources, patch in ((SOURCES, patch_file), (RESET_SOURCES, RESET_PATCH_FILE),
+                           (STREAM_SOURCES, STREAM_PATCH_FILE)):
+        if sha256(after) in sources:
+            after = patch_daemon(after, patch.read_text(), sources)
+    if sha256(after) not in STREAM_SOURCES.values():
+        raise ValueError('Unsupported or modified cu daemon; inspect this build instead of forcing a patch')
     if before == after:
         return None
     backup = package / ('cu-patch-backup-' + datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S%fZ'))
@@ -90,7 +106,10 @@ def rollback(package, backup):
         raise ValueError(f'No daemon.py in {backup}; pass a cu-patch-backup-* directory printed by an earlier install')
     saved = (backup / 'daemon.py').read_bytes()
     current = daemon.read_bytes()
-    if SOURCES.get(sha256(saved)) != sha256(current):
+    old = sha256(saved)
+    v6 = SOURCES.get(old, old)
+    reset = RESET_SOURCES.get(v6, v6)
+    if sha256(current) not in (SOURCES.get(old), RESET_SOURCES.get(v6), STREAM_SOURCES.get(reset)):
         raise ValueError('daemon.py is not the patched form of this backup; restore manually after inspection')
     replace_atomically(daemon, saved)
 
