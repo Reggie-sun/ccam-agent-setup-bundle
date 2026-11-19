@@ -1,6 +1,6 @@
 # Claude Tools Bundle
 
-在一台电脑上管理多个 Claude Code 账号，查看每个账号的剩余额度，并用指定账号启动会话。如果你有自己的 VPS，还可以把账号集中放在服务器上，让多台电脑连接同一个中转。
+套装包含三个本机工具：**ccam** 用于在终端选择 Claude Code 账号，**CC Switcher（Claude 切换器）** 用于在桌面切换账号的本地登录状态，**额度看板** 用于查看每个账号的剩余额度。如果你有自己的 VPS，还可以把账号集中放在服务器上，让多台电脑连接同一个中转。
 
 ## Download
 
@@ -44,6 +44,18 @@ ccam run work
 
 浏览器会打开 `http://127.0.0.1:47321`。用它查看各账号额度，结束时在运行看板的终端按 `Ctrl+C`。macOS 上请从终端启动账号会话。详见[本机看板说明](ccam-board/README.md)。
 
+## CC Switcher（Claude 切换器）
+
+上面的 `npx` 命令已经把 CC Switcher 下载到了 `claude-switcher/`。想在图形界面切换账号，可以直接从这里开始。macOS 和 Windows 版管理 Claude 桌面端的账号环境，Linux 版管理浏览器登录状态。
+
+| 平台 | 从套装根目录开始 |
+| --- | --- |
+| macOS | 双击 `claude-switcher/installer/安装.command`。安装后打开切换器，点击菜单栏的盾牌图标进入账号界面。[macOS 使用说明](claude-switcher/README.md) |
+| Windows（Beta） | 在管理员 PowerShell 中运行 `& .\claude-switcher\windows\install.ps1`，完成后打开桌面「Claude切换器」。安装涉及系统时区、网络设置和后台任务，请先阅读 [Windows 安装说明](claude-switcher/windows/README.md)。 |
+| Linux（Beta） | 安装 GTK 3 和 PyGObject 后，运行 `/usr/bin/python3 claude-switcher/linux/desktop.py` 打开界面。桌面快捷方式和后台保护的安装步骤见 [Linux 使用说明](claude-switcher/linux/README.md)。 |
+
+**第一次切换**：先保存当前工作，在切换器中选择目标账号槽位；首次使用该槽位时，由本人完成 Claude 登录。以后选择同一槽位即可载入它保存的登录状态。Linux 上先完全退出受管理的浏览器，切换完成后手动重新打开。切换器还提供启动前的网络环境检查，以及安装后台组件后的断线保护。
+
 ## VPS relay
 
 有 Linux VPS 时，可以在自己的服务器上运行管理页。先按 [VPS 部署指南](VPS-RELAY.md) 配置中转和管理入口，再在网页添加账号并完成官方授权。最后按[客户端配置指南](client/DEFAULT-VPS.md)把本机 Claude 指向自己的 VPS。
@@ -58,5 +70,4 @@ ccam run work
 ## Other tools and guides
 
 - **让 Agent 帮你安装**：用你的编码 Agent 打开工具目录，告诉它「先读 AGENT-GUIDE.md，按我的系统安装本机账号管理器和额度看板，保留现有配置，完成后告诉我怎么启动。」也可以使用[完整安装提示词](START-HERE.md)。
-- **Claude 环境检测器**：检查启动环境和网络配置，可按需启用断线保护。部分安装步骤涉及系统设置和管理员权限，Windows WPF 版为 Beta。见[检测器说明](claude-switcher/README.md)和 [Windows 使用指南](WINDOWS.md)。
-- **许可证**：套装使用 [MIT 许可证](LICENSE)。ccam 和环境检测器保留各自的[上游许可证](ccam/LICENSE)和[项目许可证](claude-switcher/LICENSE)。
+- **许可证**：套装使用 [MIT 许可证](LICENSE)。ccam 和 CC Switcher 保留各自的[上游许可证](ccam/LICENSE)和[项目许可证](claude-switcher/LICENSE)。
