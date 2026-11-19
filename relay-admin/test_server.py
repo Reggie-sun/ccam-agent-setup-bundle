@@ -7,7 +7,7 @@ from pathlib import Path
 import tempfile
 import threading
 import unittest
-from unittest.mock import patch
+from unittest.mock import call, patch
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 from http.server import ThreadingHTTPServer
@@ -55,6 +55,24 @@ class SecurityTests(unittest.TestCase):
         with patch.object(self.module, 'upstream') as gateway:
             self.assertEqual(self.request(auth=False)[0], 401)
             gateway.assert_not_called()
+
+    def test_presence_only_forwards_authenticated_same_origin_empty_request(self):
+        with patch.object(self.module, 'upstream') as gateway:
+            for kwargs, status in [({'auth': False}, 401), ({'csrf': False}, 403),
+                                   ({'origin': 'https://example.test'}, 403)]:
+                self.assertEqual(self.request('/api/presence', 'POST', {}, **kwargs)[0], status)
+            self.assertEqual(self.request('/api/presence', 'POST', {'force': True})[0], 400)
+            gateway.assert_not_called()
+            gateway.side_effect = [{'csrf_token': 'cu-only'}, {'active': True, 'unused': 'internal'}]
+            self.assertEqual(self.request('/api/presence', 'POST', {}), (200, {'active': True}))
+            self.assertEqual(gateway.call_args_list, [
+                call('/api/status'), call('/api/presence', 'POST', {}, 'cu-only')])
+
+    def test_presence_failure_is_reported_without_retry(self):
+        for failed in [OSError('upstream unavailable'), {'active': False}]:
+            with patch.object(self.module, 'upstream', side_effect=[{'csrf_token': 'cu-only'}, failed]) as gateway:
+                self.assertEqual(self.request('/api/presence', 'POST', {}), (502, {'error': 'presence_unconfirmed'}))
+                self.assertEqual(gateway.call_count, 2)
 
     def test_unicode_username_is_rejected(self):
         self.assertEqual(self.request(username='管理')[0], 401)

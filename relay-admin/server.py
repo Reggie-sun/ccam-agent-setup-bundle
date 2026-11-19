@@ -188,17 +188,14 @@ class Handler(BaseHTTPRequestHandler):
             self.send(502, {'error': 'login_operation_unconfirmed' if method == 'POST' else 'login_status_unavailable'})
 
     def do_POST(self):
-        with PROFILE_WRITE_LOCK:
-            self.login_post()
-
-    def login_post(self):
         if not self.authenticated():
             return
         if self.headers.get('Origin') != ORIGIN or not hmac.compare_digest(self.headers.get('X-CSRF-Token', '').encode(), CSRF.encode()):
             self.send(403, {'error': 'invalid_origin_or_csrf'})
             return
         action = re.fullmatch(r'/api/logins/([a-f0-9]{64})/(code|cancel)', self.path)
-        if self.path != '/api/logins' and not action:
+        presence = self.path == '/api/presence'
+        if not presence and self.path != '/api/logins' and not action:
             self.send(404, {'error': 'not_found'})
             return
         try:
@@ -208,7 +205,10 @@ class Handler(BaseHTTPRequestHandler):
             data = json.loads(self.rfile.read(size))
             if not isinstance(data, dict):
                 raise ValueError()
-            if self.path == '/api/logins':
+            if presence:
+                if data:
+                    raise ValueError()
+            elif self.path == '/api/logins':
                 if data == {'mode': 'add'}:
                     pass
                 elif set(data) == {'mode', 'profile_id'} and data['mode'] == 'reauth' and isinstance(data['profile_id'], str) and re.fullmatch(r'[a-f0-9]{16,64}', data['profile_id']):
@@ -221,9 +221,21 @@ class Handler(BaseHTTPRequestHandler):
             elif set(data) != {'code'} or not isinstance(data['code'], str) or not 8 <= len(data['code']) <= 2048 or any(ord(c) < 32 or ord(c) == 127 for c in data['code']):
                 raise ValueError()
         except (ValueError, UnicodeError):
-            self.send(400, {'error': 'invalid_login_request'})
+            self.send(400, {'error': 'invalid_presence_request' if presence else 'invalid_login_request'})
             return
-        self.forward_login('POST', data)
+        if presence:
+            try:
+                token = upstream('/api/status')['csrf_token']
+                result = upstream('/api/presence', 'POST', {}, token)
+                if not isinstance(result, dict) or result.get('active') is not True:
+                    raise ValueError('presence_unconfirmed')
+            except (OSError, http.client.HTTPException, ValueError, KeyError, TypeError):
+                self.send(502, {'error': 'presence_unconfirmed'})
+                return
+            self.send(200, {'active': True})
+            return
+        with PROFILE_WRITE_LOCK:
+            self.forward_login('POST', data)
 
     def do_GET(self):
         if not self.authenticated():

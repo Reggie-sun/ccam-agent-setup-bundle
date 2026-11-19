@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="dark">
+  <link rel="icon" type="image/png" sizes="32x32" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAE3UlEQVR42sWXXYhUZRjHf897PmbmzK6jrvsxKkJJJkZRFyZKpmmkSNgHSEKhJIQXdRVIN4FdRUbURYQXUVEXWgiFZhdJFhn0LYaZoq2KH637pe5uszNz5pzzPl3M7K6bmzu1U71w4Fw8vP//+zz/50uoHgPYbFtbu+d6zwqsR7kVEBpzFOGkwr4ojl4d7u3tGcGUkZ+Z+fwDquZNMTJPAVRp6BFBALV6XsQ+deXSpQOAEYBc2+zVjms+q+JqUiMljWWAAlZEHIAktvcP9nYdlKaOjlZXnJ9EJI+qBRz+3ZMgYlT1UqzJnU7QNG27Mc7a/wh8VG9GTE4UdUXYUAv4DV0uRkAErKJT14eAqggbZEZ+Tl23xWGFJI5xfR/H9xomUrcmDrkh18SSXzSf7KwZXDnXxcDFHhzPbYQndFK1iwhxGLHimcfZ8v4rLFp7D5XhImJMQ5Kz7luisEJYKJJEcVULDVRknXVEEGOQScBF5G8RrIuAcQyIoKqIkQndLyIYx5BEMZokGMeZAgEZU4YYQ2mogI1iXNelUgqpFEvjSIipAhcHC2Rn5vCDDMNXB8c8wl8rzb1OlqpgdQx8sMCSjQ9yx71LCazH8o0P8dvhE1w8dgo/SIMqUTkkOyPHYy9tY9GqpUTlCl/v3sfBnbswZuQ11WQTM56Jk2me9sI16Diei5dO4aZ84kqFhSuWsPWdl3F9j6gc0nrTXG5btYyjBw6RVCK8TApV2Pz6dpZtXE8cx6Sbsty1bjVhqUTnt0fI5JpwXBdxDJrY8c4eKURiDJViiQX3LeGWlXcTlcrEUcTidavpuHkelVIZ4zokUUKmKeCXr76j88gxjOMwvX0Wyx5ZV7VxDKgixhCVQw7t+ZgkivDSafpPX+DHXftxU/5oDRkfAmvxsxma21sIh4uotWRyTSRxjIgBrcbUJpbm1pk0t7UgRsh1tI4KfyQL1FrcVIpcvpWwWCKVDRjuH6hGYiINqCqO79H36zl+3vs5NkkISyXC3gHWb9tK4eogSRyTygbYKObLt/Yw1H8Fx3OxcULH7NnkF84fFV+uvYXvP/yUH3btJ5UNEGMYvjyAcZ1xFdS9Nv7G8+jrPE/3iTM19SqnDx3GT6VZvvlRgtw0fu+7wt4X3+Cb9z7CDzIAVIolSv2DPPHa87TMmw3AkU++4IPndjDUcxnXc7FWMY7BTfkTa2CiQiIC1lrKQ8PMvX0BLXPyXDx+issXLhHkpo2+xLgOQ939LFi5mCff3cFAVy87H36asFDEzwaotaMziVqtIw1rF4+YBtOb6T55tpp66TRBrhmbJGPSicEP0ogxlMMyYVjGS6eIw0rV7gZNy62nWtnE4mVS+EEatYr9UyoBo68UEaRWNVV10rnOrbtvWkXROuzsdW5uSDOqr7ca/GxQrZB19iOZkZ9jpzwBi2DjhEyuifaFNxGHFbqPn6nVjxterXWPZPVMeTa2xOUQjOCnU3W1ZQN6VkQUsFOd+o1rSDVnSWWDycBtFVPPGlX21Kyn7gkdEaGtw1JElT3/+2JiCt3dfZroJgGprU1JQ7wx8WqWiIgjIJropkJ3d58BzGBv10E0WVNdHMWZdPD7Z5kiIuKo1fNosmawt+sgYJwaM1MqFDqdILPbGGMFWqh+jV7P346SaMtQT8/RkRXtD5M6Pk/YGbvlAAAAAElFTkSuQmCC">
   <title>VPS 账号额度 · AURELIS</title>
   <style>
     @font-face{font-family:"Barlow";font-weight:400;src:url('/fonts/Barlow-Regular.ttf');font-display:swap}
@@ -141,7 +142,7 @@
   <section id="timeline" class="timeline" aria-labelledby="reset-heading"><h2 id="reset-heading">未来 5 小时额度重置</h2><div class="reset-scroll"><div class="reset-chart" id="reset-chart"></div></div><ul class="reset-list" id="reset-events"></ul></section>
   <div class="head" aria-hidden="true"><span>账号 · <span id="count">—</span></span><span>现在</span><span>5 小时额度</span><span>每周额度</span><span class="recent-head">最近请求</span><span></span></div>
   <div id="accounts" class="list" aria-busy="true"><div class="empty"><strong>正在读取账号…</strong>连接 VPS 账号池</div></div>
-  <footer class="footnote">数据来自 VPS，与本机 ccam 独立 · VPS 后台约每 5 分钟自动验证并按需续期，关闭网页仍运行 · 账号上方的 work/main 为本机 ccam 别名，按邮箱对应仅供辨认 · 页面每 60 秒读取，每行“额度…前更新”是该账号额度数值最后一次读到的时间（来自中转请求或后台查询），cu 未提供该时间时不显示 · 限流时自动延后 · 请求记录不保证成功</footer>
+  <footer class="footnote">数据来自 VPS，与本机 ccam 独立 · VPS 后台约每 5 分钟自动验证并按需续期，关闭网页仍运行 · 账号上方的 work/main 为本机 ccam 别名，按邮箱对应仅供辨认 · 页面可见时每 15 秒读取 VPS 数据，每行“额度…前更新”是该账号额度数值最后一次读到的时间（来自中转请求或后台查询），cu 未提供该时间时不显示 · 限流时自动延后 · 请求记录不保证成功</footer>
   <dialog id="help" aria-labelledby="help-title">
     <div class="modal-head"><h2 id="help-title">添加账号</h2><button id="close" class="close" aria-label="关闭登录流程">×</button></div>
     <div class="modal-body">
@@ -173,6 +174,7 @@
     function dateText(value){const t=toMillis(value);return Number.isNaN(t)?'未知':new Date(t).toLocaleString('zh-CN');}
     function span(ms){const m=Math.max(1,Math.ceil(ms/60000));if(m<60)return m+'分';const h=Math.floor(m/60);if(h<24)return h+'小时'+(m%60?m%60+'分':'');return Math.floor(h/24)+'天'+(h%24?h%24+'小时':'');}
     function untilReset(value){const t=toMillis(value);if(Number.isNaN(t))return null;return t-Date.now();}
+    function pastReset(value){return toMillis(value)<=Date.now();}
     function resetText(value){const left=untilReset(value);return left===null?'重置时间未知':left<=0?'已到重置时间 · 待刷新':span(left)+'后重置';}
     function isFull(used){return typeof used==='number'&&used>=100;}
     function remaining(used){return typeof used==='number'&&Number.isFinite(used)?Math.max(0,Math.min(100,100-used)):null;}
@@ -190,8 +192,9 @@
       if(authStale(p))return ['warn','登录状态待更新','最近验证已超过 10 分钟'];
       if(['forbidden','rate_limited','error','pending'].includes(p.auth_status))return ['warn',authWords[p.auth_status],'后台自动检查，无需手动刷新'];
       if(p.state==='disabled')return ['off',states.disabled,'后台状态'];
-      if(isFull(p.usage_7d_percent))return ['stop','本周已满',untilReset(p.usage_7d_resets_at)>0?span(untilReset(p.usage_7d_resets_at))+'后恢复':'恢复时间未知'];
-      if(isFull(p.usage_5h_percent))return ['stop','5 小时已满',untilReset(p.usage_5h_resets_at)>0?span(untilReset(p.usage_5h_resets_at))+'后恢复':'恢复时间未知'];
+      if(!pastReset(p.usage_7d_resets_at)&&isFull(p.usage_7d_percent))return ['stop','本周已满',untilReset(p.usage_7d_resets_at)>0?span(untilReset(p.usage_7d_resets_at))+'后恢复':'恢复时间未知'];
+      if(!pastReset(p.usage_5h_resets_at)&&isFull(p.usage_5h_percent))return ['stop','5 小时已满',untilReset(p.usage_5h_resets_at)>0?span(untilReset(p.usage_5h_resets_at))+'后恢复':'恢复时间未知'];
+      if(pastReset(p.usage_5h_resets_at)||pastReset(p.usage_7d_resets_at))return ['warn','额度待更新','重置后尚无新读数'];
       if(p.state==='exhausted')return ['stop',states.exhausted,'后台状态'];
       if(p.state==='cooldown'||p.state==='draining')return ['warn',states[p.state],'后台状态'];
       if(left5!==null&&left5<=15)return ['warn','快满了','5 小时还剩 '+quotaNumber(left5)+'%'];
@@ -225,7 +228,7 @@
     }
     let selectedReset=null;
     function boardOverview(){
-      const candidate=profiles.filter(p=>p.enabled&&p.state!=='auth_invalid'&&p.auth_status!=='expired'&&!isFull(p.usage_7d_percent)&&remaining(p.usage_5h_percent)!==null).sort((a,b)=>a.usage_5h_percent-b.usage_5h_percent)[0];
+      const candidate=profiles.filter(p=>p.enabled&&p.state!=='auth_invalid'&&p.auth_status!=='expired'&&!pastReset(p.usage_5h_resets_at)&&!pastReset(p.usage_7d_resets_at)&&!isFull(p.usage_7d_percent)&&remaining(p.usage_5h_percent)!==null).sort((a,b)=>a.usage_5h_percent-b.usage_5h_percent)[0];
       $('reference-value').textContent=candidate?quotaNumber(remaining(candidate.usage_5h_percent))+'%':'未知';$('reference-name').textContent=candidate?candidate.name:'暂无可靠额度数据';$('reference').classList.toggle('none',!candidate);
       const total=18000000,now=Date.now(),events=[];
       for(const p of profiles)for(const [field,label] of [['usage_5h_resets_at','5 小时'],['usage_7d_resets_at','每周']]){const at=toMillis(p[field]);if(at>now&&at<=now+total)events.push({id:p.id,name:p.name,alias:typeof p.alias==='string'?p.alias:'',label,at});}
@@ -259,7 +262,8 @@
       const markers=events.map(event=>{
         const key=keyOf(event), button=node('button','reset-marker'), when=clock(event.at,true);
         button.type='button';button.dataset.key=key;button.style.maxWidth=labelLimit+'px';
-        button.append(node('span','lbl',who(event)),node('span','sub',event.label+' · '+(labelLimit<125?clock(event.at):span(event.at-now)+'后重置')));
+        const resetTime=labelLimit<125?clock(event.at):span(event.at-now)+'后重置';
+        button.append(node('span','lbl',who(event)),node('span','sub',event.label==='每周'?'每周 · '+resetTime:resetTime));
         button.setAttribute('aria-controls','reset-events');
         button.setAttribute('aria-label',when+' '+(event.alias?event.alias+' ':'')+event.name+' '+event.label+'额度重置，展开精确时间');
         button.title=(event.alias?event.alias+' · ':'')+event.name+' · '+event.label+' · '+when+' 重置';
@@ -336,12 +340,12 @@
       if(focused)markers.find(m=>m.key===focused)?.button.focus({preventScroll:true});
     }
     function quota(used, reset, area, name) {
-      const e=node('div','quota '+area);const left=remaining(used);const top=node('div','meter-top');const num=node('span','meter-num'+(left===null?' unknown':''),left===null?'—':quotaNumber(left));
+      const e=node('div','quota '+area);const expired=pastReset(reset), left=expired?null:remaining(used);const top=node('div','meter-top');const num=node('span','meter-num'+(left===null?' unknown':''),left===null?'—':quotaNumber(left));
       if(left!==null)num.append(node('small','','%'));const tag=node('span','meter-label');tag.append(node('span','qn',name+' '),document.createTextNode(left===null?'未知':'剩余'));top.append(num,tag);
       const track=node('div','track');if(left>0){const fill=node('div','fill'+(left<=15?' low':''));fill.style.width=left+'%';track.append(fill);}
       // 官方用量接口在窗口内尚无用量时不返回重置时间：窗口从首次请求开始计时。
       const idle=used===0&&Number.isNaN(toMillis(reset));
-      e.append(top,track,node('div','reset',idle?'未开始计时':left===0?'已用完 · '+resetText(reset):resetText(reset)));return e;
+      e.append(top,track,node('div','reset',expired?'重置后等待新读数':idle?'未开始计时':left===0?'已用完 · '+resetText(reset):resetText(reset)));return e;
     }
     function statusDetails(p) {
       const detail=node('div','status-details');detail.hidden=!expanded.has(p.id);detail.id='details-'+p.id;
@@ -353,8 +357,8 @@
       const abnormal=['auth','rate_limited','failure'].includes(p.probe_status);detail.append(item(probeText[p.probe_status]||probeText.unknown,abnormal?'warning':''));
       const next=item('可重试时间：未知');if(typeof p.next_probe_at==='number'){next.className='next-probe';next.dataset.timestamp=String(p.next_probe_at);}detail.append(next);
       detail.append(item('最近请求记录：'+dateText(p.last_used_at)+'（不保证请求成功）'),item('后台调度状态：'+(p.enabled?(states[p.state]||'状态未知'):'已停用')));
-      if(isFull(p.usage_5h_percent))detail.append(item('5小时额度已满（后台数值）','warning'));
-      if(isFull(p.usage_7d_percent))detail.append(item('本周额度已满（后台数值）','warning'));
+      if(!pastReset(p.usage_5h_resets_at)&&isFull(p.usage_5h_percent))detail.append(item('5小时额度已满（后台数值）','warning'));
+      if(!pastReset(p.usage_7d_resets_at)&&isFull(p.usage_7d_percent))detail.append(item('本周额度已满（后台数值）','warning'));
       const tools=node('div','detail-tools');const priority=node('label','priority');priority.append(node('span','','优先级'));
       const input=node('input');input.type='number';input.min='1';input.max='999';input.step='1';input.value=dirty.has(p.id)?dirty.get(p.id):p.priority;input.setAttribute('aria-label',`${p.name} 的优先级`);input.disabled=saving;
       const save=node('button','pill','保存');save.disabled=saving||!dirty.has(p.id);input.addEventListener('input',()=>{dirty.set(p.id,input.value);expanded.add(p.id);save.disabled=false;});
@@ -378,7 +382,7 @@
         if(p.state==='auth_invalid'||p.auth_status==='expired'){const relogin=node('button','pill go relogin','重新登录');relogin.addEventListener('click',()=>openLogin('reauth',p.id));actions.append(relogin);}
         const toggle=node('button','toggle'+(p.enabled?' enabled':''));toggle.setAttribute('role','switch');toggle.setAttribute('aria-checked',String(p.enabled));toggle.setAttribute('aria-label',`${p.name} 启用状态`);toggle.title=p.enabled?'已启用 · 点击停用':'已停用 · 点击启用';toggle.disabled=saving;toggle.addEventListener('click',()=>patch(p,{enabled:!p.enabled},toggle));
         const more=node('button','more');more.setAttribute('aria-expanded',String(open));more.setAttribute('aria-controls','details-'+p.id);more.setAttribute('aria-label',`${p.name} 详情`);more.innerHTML='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>';
-        more.addEventListener('click',()=>{const next=!expanded.has(p.id);if(next)expanded.add(p.id);else expanded.delete(p.id);more.setAttribute('aria-expanded',String(next));row.classList.toggle('open',next);row.querySelector('.status-details').hidden=!next;if(!next&&dirty.has(p.id))notice('该账号有未保存的优先级修改，自动刷新已暂停。');});
+        more.addEventListener('click',()=>{const next=!expanded.has(p.id);if(next)expanded.add(p.id);else expanded.delete(p.id);more.setAttribute('aria-expanded',String(next));row.classList.toggle('open',next);row.querySelector('.status-details').hidden=!next;if(!next&&dirty.has(p.id))notice('该账号有未保存的优先级修改。');});
         actions.append(toggle,more);
         row.append(identity,stateBox,quota(p.usage_5h_percent,p.usage_5h_resets_at,'q5','5 小时'),quota(p.usage_7d_percent,p.usage_7d_resets_at,'q7','每周'),recent,actions,statusDetails(p));list.append(row);
       }
@@ -386,7 +390,7 @@
     }
     async function load(manual=false) {
       if(loading||saving)return;loading=true;$('refresh').disabled=true;paintMode();$('accounts').setAttribute('aria-busy','true');if(manual){$('refresh').classList.add('spin');setTimeout(()=>$('refresh').classList.remove('spin'),650);}
-      try {const response=await fetch('/api/profiles',{credentials:'same-origin',cache:'no-store'});if(!response.ok)throw new Error(failure(response.status));const data=await response.json();profiles=data.profiles;currentId=typeof data.current_profile_id==='string'?data.current_profile_id:null;distributeMode=typeof data.distribute==='boolean'?data.distribute:null;paintMode();csrf=data.csrf_token;lastReadAt=Date.now();readFailed=false;render();if(manual)notice('已读取 VPS 状态；这不会强制验证登录或检测额度。',true);}
+      try {const response=await fetch('/api/profiles',{credentials:'same-origin',cache:'no-store'});if(!response.ok)throw new Error(failure(response.status));const data=await response.json();profiles=data.profiles;currentId=typeof data.current_profile_id==='string'?data.current_profile_id:null;distributeMode=typeof data.distribute==='boolean'?data.distribute:null;paintMode();csrf=data.csrf_token;lastReadAt=Date.now();readFailed=false;render();if(manual||!lastPresence)notePresence();if(manual)notice('已读取 VPS 状态；这不会强制验证登录或检测额度。',true);}
       catch(error){readFailed=true;distributeMode=null;notice(error instanceof TypeError?'连接失败，请检查网络后重试。':error.message);if(!profiles.length){$('accounts').replaceChildren(node('div','empty','未能读取账号。请点击右上角刷新重试。'));}}
       finally{loading=false;$('refresh').disabled=false;$('accounts').setAttribute('aria-busy','false');freshness();}
     }
@@ -507,8 +511,21 @@
     }
     $('search').addEventListener('input',render);$('mode').querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>setMode(b.dataset.distribute==='true')));$('refresh').addEventListener('click',()=>load(true));$('add').addEventListener('click',()=>openLogin('add'));$('reauth').addEventListener('click',()=>openLogin('reauth'));
     $('start-login').addEventListener('click',startLogin);$('code-form').addEventListener('submit',submitCode);$('cancel-login').addEventListener('click',()=>cancelLogin());$('query-login').addEventListener('click',()=>login?queryLogin():recoverCurrent());$('done-login').addEventListener('click',()=>$('help').close());$('close').addEventListener('click',()=>cancelLogin(true));$('help').addEventListener('cancel',event=>{event.preventDefault();cancelLogin(true);});$('login-target').addEventListener('change',paintLogin);
-    setInterval(freshness,10000);document.addEventListener('visibilitychange',freshness);addEventListener('resize',()=>{paintMode();cancelAnimationFrame(boardOverview.frame);boardOverview.frame=requestAnimationFrame(boardOverview);});
-    setInterval(()=>{if(!dirty.size&&!$('help').open)load();},60000);
+    let lastPresence=0;
+    function notePresence(){
+      if(document.hidden||!csrf||Date.now()-lastPresence<60000)return;
+      lastPresence=Date.now();
+      fetch('/api/presence',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRF-Token':csrf},body:'{}'}).catch(()=>{});
+    }
+    for(const event of ['pointerdown','keydown','wheel'])document.addEventListener(event,notePresence,{passive:true});
+    function refreshVisible(){
+      if(document.hidden||$('help').open||document.activeElement?.matches('.priority input'))return;
+      load();
+    }
+    setInterval(freshness,10000);
+    document.addEventListener('visibilitychange',()=>{freshness();if(!document.hidden){notePresence();refreshVisible();}});
+    addEventListener('resize',()=>{paintMode();cancelAnimationFrame(boardOverview.frame);boardOverview.frame=requestAnimationFrame(boardOverview);});
+    setInterval(refreshVisible,15000);
     // 管理入口每个请求都要做 scrypt 认证，且最多 2 个并发；先取字体再读列表，避免首屏并发导致 503。
     Promise.race([Promise.allSettled([...document.fonts].map(f=>f.load())),new Promise(r=>setTimeout(r,4000))]).then(()=>load()).then(()=>{const id=savedLoginId();if(id){login={login_id:id,status:'unknown'};$('help-title').textContent='恢复登录流程';$('fixed-target').hidden=false;$('fixed-target').textContent='正在核对已发起的流程，目标保持不变。';$('help').showModal();paintLogin();queryLogin();}else recoverCurrent();});
   </script>
